@@ -12,7 +12,11 @@ public:
 
 	enum class MsgType
 	{
-
+		VERTEXPOS_MESH,
+		TRANSFORMATION_NODE,
+		LIGHT_POS,
+		MESH_CREATION,
+		BLABLABLA,
 	};
 
 

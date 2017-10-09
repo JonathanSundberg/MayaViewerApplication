@@ -12,6 +12,8 @@ Comlib::Comlib(size_t Buffsize)
 
 Comlib::~Comlib()
 {
+	UnmapViewOfFile(viewP);
+	CloseHandle(hFileMapping);
 }
 
 bool Comlib::createFileMap()
