@@ -18,9 +18,15 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ComlibMaya.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="maya_includes .h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ComlibMaya.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
