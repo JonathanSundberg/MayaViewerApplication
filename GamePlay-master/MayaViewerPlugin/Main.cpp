@@ -10,10 +10,36 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 	msg += elapsedTime;
 	MGlobal::displayInfo(msg);
 }
+void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
+{
+
+}
 
 void nodeAdded(MObject &node, void* clientData)
 {
+	MStatus status = MS::kSuccess;
 
+
+
+
+
+
+	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
+	(
+		node,
+		AttrChanged,
+		NULL,
+		&status
+	);
+
+	if (status == MS::kSuccess)
+	{
+
+		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
+		{
+
+		}
+	}
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
