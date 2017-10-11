@@ -2,6 +2,14 @@
 #include <iostream>
 
 using namespace std;
+MCallbackIdArray myCallbackArray;
+
+void timerCallback(float elapsedTime, float lastTime, void* clientData)
+{
+	MString msg("Elapsed time: ");
+	msg += elapsedTime;
+	MGlobal::displayInfo(msg);
+}
 
 EXPORT MStatus initializePlugin(MObject obj)
 {
@@ -15,6 +23,25 @@ EXPORT MStatus initializePlugin(MObject obj)
 	}
 
 	MGlobal::displayInfo("Maya Application loaded!");
+
+
+	MStatus status = MS::kSuccess;
+
+	MCallbackId id = MTimerMessage::addTimerCallback
+	(
+		5,
+		timerCallback,
+		NULL, &status
+	);
+
+	if (status == MS::kSuccess) {
+
+		if (myCallbackArray.append(id) == MS::kSuccess)
+		{
+
+		}
+	}
+
 
 	return res;
 }
