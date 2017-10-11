@@ -17,12 +17,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 void nodeAdded(MObject &node, void* clientData)
 {
-	MStatus status = MS::kSuccess;
-
-
-
-
-
 
 
 }
