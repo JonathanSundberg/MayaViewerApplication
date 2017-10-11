@@ -10,8 +10,6 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 	msg += elapsedTime;
 	MGlobal::displayInfo(msg);
 }
-void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
-{
 
 void findCamera()
 {
@@ -154,50 +152,13 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 void nodeAdded(MObject &node, void* clientData)
 {
-	MStatus status = MS::kSuccess;
 
 
-
-
-
-
-	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
-	(
-		node,
-		AttrChanged,
-		NULL,
-		&status
-	);
-
-	if (status == MS::kSuccess)
-	{
-
-		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
-		{
-
-		}
-	}
-
-	MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
-	(
-		node,
-		meshChanged,
-		NULL,
-		&status
-	);
-	if (status == MS::kSuccess)
-	{
-
-		if (myCallbackArray.append(meshChangedID) == MS::kSuccess)
-		{
-
-		}
-	}
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
 {
-
+	MObject callBackNode;
 	MStatus res = MS::kSuccess;
 
 	MFnPlugin MayaApplication(obj, "Maya plugin", "1.0", "Any", &res);
@@ -237,6 +198,39 @@ EXPORT MStatus initializePlugin(MObject obj)
 	if (status == MS::kSuccess)
 	{
 		if (myCallbackArray.append(addNodeID) == MS::kSuccess)
+		{
+
+		}
+	}
+
+	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
+	(
+		callBackNode,
+		AttrChanged,
+		NULL,
+		&status
+	);
+
+	if (status == MS::kSuccess)
+	{
+
+		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
+		{
+
+		}
+	}
+
+	MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
+	(
+		callBackNode,
+		meshChanged,
+		NULL,
+		&status
+	);
+	if (status == MS::kSuccess)
+	{
+
+		if (myCallbackArray.append(meshChangedID) == MS::kSuccess)
 		{
 
 		}
