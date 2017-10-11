@@ -11,6 +11,11 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 	MGlobal::displayInfo(msg);
 }
 
+void nodeAdded(MObject &node, void* clientData)
+{
+
+}
+
 EXPORT MStatus initializePlugin(MObject obj)
 {
 
@@ -37,6 +42,22 @@ EXPORT MStatus initializePlugin(MObject obj)
 	if (status == MS::kSuccess) {
 
 		if (myCallbackArray.append(id) == MS::kSuccess)
+		{
+
+		}
+	}
+
+	MCallbackId addNodeID = MDGMessage::addNodeAddedCallback
+	(
+		nodeAdded,
+		"dependNode",
+		NULL,
+		&status
+	);
+
+	if (status == MS::kSuccess)
+	{
+		if (myCallbackArray.append(addNodeID) == MS::kSuccess)
 		{
 
 		}
