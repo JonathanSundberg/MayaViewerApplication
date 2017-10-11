@@ -64,7 +64,7 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 			{
 				MGlobal::displayInfo("MeshChanged callback added successfully!");
 			}
-		}		
+		}	
 	}
 }
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
