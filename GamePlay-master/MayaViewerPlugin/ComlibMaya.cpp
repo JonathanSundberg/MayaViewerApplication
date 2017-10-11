@@ -89,6 +89,15 @@ bool ComlibMaya::send(const void* msg, const size_t length)
 
 	size_t totalBlockSize = nrOfBlocks * 64;
 
+	if (*Head + totalBlockSize >= *Tail && *Head < *Tail)
+	{
+		return false;
+	}
+	else if (*Head + totalBlockSize >= BufferSize && *Tail == 0)
+	{
+		return false;
+	}
+
 	
 	return true;
 }
