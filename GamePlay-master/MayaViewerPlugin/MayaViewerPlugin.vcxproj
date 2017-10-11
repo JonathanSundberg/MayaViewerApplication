@@ -153,6 +153,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComlibMaya.h" />
+    <ClInclude Include="MayaShared.h" />
     <ClInclude Include="maya_includes .h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
