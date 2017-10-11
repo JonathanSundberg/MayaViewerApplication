@@ -45,7 +45,28 @@ void meshChanged(MObject & node, void* clientData)
 	MGlobal::displayInfo(msg);
 
 }
+void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
+{
+	MStatus status;
 
+	if (child.node().apiType() == MFn::kMesh)
+	{	
+		MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
+		(
+			child.node(),
+			meshChanged,
+			NULL,
+			&status
+		);
+		if (status == MS::kSuccess)
+		{
+			if (myCallbackArray.append(meshChangedID) == MS::kSuccess)
+			{
+				MGlobal::displayInfo("MeshChanged callback added successfully!");
+			}
+		}		
+	}
+}
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
@@ -153,12 +174,12 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 void nodeAdded(MObject &node, void* clientData)
 {
 
-
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MObject callBackNode;
+	
 	MStatus res = MS::kSuccess;
 
 	MFnPlugin MayaApplication(obj, "Maya plugin", "1.0", "Any", &res);
@@ -202,19 +223,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
-	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
-	(
-		callBackNode,
-		AttrChanged,
-		NULL,
-		&status
-	);
 
-	if (status == MS::kSuccess)
-	{
-
-		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
-		{
 
 	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
 	(
@@ -229,25 +238,23 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
 		{
-
+			MGlobal::displayInfo("Attribute changed callback added successfully!");
 		}
 	}
-
-	MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
-	(
-		callBackNode,
-		meshChanged,
+	MCallbackId DAGChildAddedID = MDagMessage::addChildAddedCallback(
+		childAdded,
 		NULL,
 		&status
 	);
 	if (status == MS::kSuccess)
 	{
-
-		if (myCallbackArray.append(meshChangedID) == MS::kSuccess)
+		if (myCallbackArray.append(DAGChildAddedID) == MS::kSuccess)
 		{
 
 		}
 	}
+	
+
 
 	findCamera();
 	return res;
