@@ -10,19 +10,25 @@ public:
 	Comlib(size_t Buffsize);
 	~Comlib();
 
-	enum class MsgType
-	{
-		VERTEXPOS_MESH,
-		TRANSFORMATION_NODE,
-		LIGHT_POS,
-		MESH_CREATION,
-		BLABLABLA,
-	};
+	bool receive(char* msg);
 
+private:
 
 	size_t BufferSize;
 	size_t* Head;
 	size_t* Tail;
+
+	enum TYPE
+	{
+		NORMAL,
+		DUMMY
+	};
+
+	struct Header
+	{
+		TYPE msgId;
+		size_t length;
+	};
 
 	void*viewP;
 	char*BuffPtr;
@@ -34,8 +40,8 @@ public:
 
 	HANDLE hFileMapping;
 
-
-	bool receive();
+	HANDLE Mutex;
+	
 
 	bool createFileMap();
 	bool createMVOF();

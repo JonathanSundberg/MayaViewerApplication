@@ -6,7 +6,10 @@ Comlib::Comlib(size_t Buffsize)
 	BufferSize = Buffsize;
 	Verision = "3D_Viewer";
 
+	createFileMap();
+	createMVOF();
 
+	Mutex = CreateMutex(nullptr, false, L"Mutex");
 
 }
 
@@ -77,8 +80,42 @@ bool Comlib::createMVOF()
 	return true;
 }
 
-bool Comlib::receive()
+bool Comlib::receive(char* msg)
 {
 
-	return true;
+	// if we have new messages
+	if (*Head != *Tail)
+	{
+		Header h;
+		memcpy(&h, BufferStart + *Tail, sizeof(Header));
+
+		// If it was a dummy message
+		if (h.msgId == DUMMY)
+		{
+			WaitForSingleObject(Mutex, INFINITE);
+			{
+				*Tail = 0;
+			}
+			ReleaseMutex(Mutex);
+			return false;
+		}
+
+
+		size_t blocks = ceil(h.length + sizeof(Header) / 64.0);
+		size_t totalBlocksize = blocks * 64;
+
+		memcpy(msg, BufferStart + *Tail + sizeof(Header), h.length);
+
+		WaitForSingleObject(Mutex, INFINITE);
+		{
+			*Tail += totalBlocksize;
+		}
+		ReleaseMutex(Mutex);
+
+		return true;
+
+
+	}
+
+	return false;
 }

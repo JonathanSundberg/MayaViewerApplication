@@ -9,19 +9,30 @@ public:
 	ComlibMaya(size_t Buffsize);
 	~ComlibMaya();
 
-
-	enum class MsgType
-	{
-
-	};
+	bool send(const void* msg, const size_t length);
 
 
+private:
 	size_t BufferSize;
 	size_t* Head;
 	size_t* Tail;
+	enum TYPE
+	{
+		NORMAL,
+		DUMMY
+	};
 
-	void*viewP;
-	char*BuffPtr;
+	struct Header
+	{
+		TYPE msgId;
+		size_t length;
+
+
+
+	};
+
+	void* viewP;
+	char* BuffPtr;
 
 	char* BufferStart;
 
@@ -31,12 +42,13 @@ public:
 	HANDLE hFileMapping;
 
 
-	bool send();
+
+	HANDLE Mutex;
 
 	bool createFileMap();
 	bool createMVOF();
 
-private:
+
 
 
 
