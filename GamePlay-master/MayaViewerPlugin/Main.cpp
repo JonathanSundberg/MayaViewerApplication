@@ -24,27 +24,12 @@ void nodeAdded(MObject &node, void* clientData)
 
 
 
-	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
-	(
-		node,
-		AttrChanged,
-		NULL,
-		&status
-	);
 
-	if (status == MS::kSuccess)
-	{
-
-		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
-		{
-
-		}
-	}
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
 {
-
+	MObject callBackNode;
 	MStatus res = MS::kSuccess;
 
 	MFnPlugin MayaApplication(obj, "Maya plugin", "1.0", "Any", &res);
@@ -88,7 +73,22 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
+	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
+	(
+		callBackNode,
+		AttrChanged,
+		NULL,
+		&status
+	);
 
+	if (status == MS::kSuccess)
+	{
+
+		if (myCallbackArray.append(AttrChangedID) == MS::kSuccess)
+		{
+
+		}
+	}
 
 	return res;
 }

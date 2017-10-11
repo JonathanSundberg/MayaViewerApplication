@@ -28,6 +28,7 @@
 #include <maya/MFnPointLight.h>
 #include <maya/MSelectionList.h>
 #include <maya/MItDependencyNodes.h>
+#include <maya/MFnAttribute.h>
 
 // Wrappers
 #include <maya/MGlobal.h>
