@@ -190,6 +190,7 @@ xcopy ..\..\GamePlay-master\gameplay\res\ui res\ui\* /s /y /d</Command>
     <ClCompile Include="src\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\MayaViewerPlugin\MayaShared.h" />
     <ClInclude Include="Comlib.h" />
     <ClInclude Include="src\Main.h" />
   </ItemGroup>

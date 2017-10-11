@@ -29,5 +29,8 @@
     <ClInclude Include="ComlibMaya.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MayaShared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,9 +1,17 @@
 #include "maya_includes .h"
+#include "ComlibMaya.h"
 #include <iostream>
-
+#include "MayaShared.h"
+#include <sstream>
 using namespace std;
+#define BUFFERSIZE (200 * 1024)
+#define MEGABYTE 1024
 MCallbackIdArray myCallbackArray;
 
+ComlibMaya* Comlib;
+char *Message;
+
+size_t length;
 void timerCallback(float elapsedTime, float lastTime, void* clientData)
 {
 	MString msg("Elapsed time: ");
@@ -61,15 +69,47 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			{
 
 				MString name = plug.partialName();
+
+				double scale[3] = { 0,0,0 };
+				double RotationX, RotationY, RotationZ, RotationW;
+				double TranslationX, TranslationY, TranslationZ;
+				
+
+
 				if (name == "t" || name == "tx" || name == "ty" || name == "tz")
 				{
-					MString changed = "Attribute changed: " + name + " " + transNode.getTranslation(MSpace::kTransform).x + " " + transNode.getTranslation(MSpace::kTransform).y + " " + transNode.getTranslation(MSpace::kTransform).z;
+
+					TranslationX = transNode.getTranslation(MSpace::kTransform).x;
+					TranslationY = transNode.getTranslation(MSpace::kTransform).y;
+					TranslationZ = transNode.getTranslation(MSpace::kTransform).z;
+
+					MString changed = "Attribute changed: " + name + " " + TranslationX + " " + TranslationY + " " + TranslationZ;
 
 					MGlobal::displayInfo(changed);
+					
+					
+					
+
+
+
+					Translation nodeTransform;
+					
+					nodeTransform.TypeHeader = MsgType::TRANSFORM_NODE_TRANSFORM;
+					nodeTransform.Tx = TranslationX;
+					nodeTransform.Ty = TranslationY;
+					nodeTransform.Tz = TranslationZ;
+
+					memcpy(Message, &nodeTransform, sizeof(Translation));
+					
+					
+
+					
+				
+					
 				}
 				if (name == "r" || name == "rx" || name == "ry" || name == "rz")
 				{
-					double RotationX, RotationY, RotationZ, RotationW;
+					
 
 					transNode.getRotationQuaternion(RotationX, RotationY, RotationZ, RotationW);
 					MString changed = "Attribute changed: " + name + " " + RotationX + " " + RotationY + " " + RotationZ;
@@ -78,7 +118,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				}
 				if (name == "s" || name == "sx" || name == "sy" || name == "sz")
 				{
-					double scale[3] = { 0,0,0 };
+					
 					transNode.getScale(scale);
 
 					MString changed = "Attribute changed: " + name + " " + scale[0] + " " + scale[1] + " " + scale[2];
@@ -170,6 +210,10 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MGlobal::displayInfo("Maya Application loaded!");
 
 
+	Comlib = new ComlibMaya(BUFFERSIZE);
+	Message = new char[MEGABYTE];
+	
+
 	MStatus status = MS::kSuccess;
 
 	MCallbackId id = MTimerMessage::addTimerCallback
@@ -186,6 +230,8 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
+
+
 
 	MCallbackId addNodeID = MDGMessage::addNodeAddedCallback
 	(
@@ -247,6 +293,7 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 	MMessage::removeCallbacks(myCallbackArray);
 	MGlobal::displayInfo("Maya application unloaded!");
 
+	delete Comlib;
 	return MS::kSuccess;
 	
 }

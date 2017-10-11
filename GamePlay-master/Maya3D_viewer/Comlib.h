@@ -10,14 +10,7 @@ public:
 	Comlib(size_t Buffsize);
 	~Comlib();
 
-	enum class MsgType
-	{
-		VERTEXPOS_MESH,
-		TRANSFORMATION_NODE,
-		LIGHT_POS,
-		MESH_CREATION,
-		BLABLABLA,
-	};
+	
 
 
 	size_t BufferSize;

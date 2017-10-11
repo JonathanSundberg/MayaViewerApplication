@@ -79,8 +79,16 @@ bool ComlibMaya::createMVOF()
 	return true;
 }
 
-bool ComlibMaya::send()
+bool ComlibMaya::send(const void* msg, const size_t length)
 {
 
+	size_t headerSize = sizeof(Header);
+	size_t msgSize = headerSize + length;
+
+	double nrOfBlocks = ceil(msgSize / 64.0);
+
+	size_t totalBlockSize = nrOfBlocks * 64;
+
+	
 	return true;
 }
