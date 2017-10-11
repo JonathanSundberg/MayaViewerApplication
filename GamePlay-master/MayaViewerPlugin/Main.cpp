@@ -19,6 +19,28 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 	MGlobal::displayInfo(msg);
 }
 
+void getVertexTranslation(MDagPath &child)
+{
+	MStatus status;
+	MFnMesh mesh = child.node(&status);
+	if (status == MS::kSuccess)
+	{
+		MFloatPointArray vtxArray;
+		MGlobal::displayInfo("Node name: " + mesh.name());
+		mesh.getPoints(vtxArray, MSpace::kWorld);
+		int nrOfVerts = vtxArray.length();
+		MString strVerts; strVerts += nrOfVerts;
+		MGlobal::displayInfo(strVerts);
+		for (size_t i = 0; i < nrOfVerts; i++)
+		{
+			MString vtxInfo;
+			vtxInfo += "X: "; vtxInfo += vtxArray[i].x; vtxInfo += " Y: "; vtxInfo += vtxArray[i].y; vtxInfo += " Z: "; vtxInfo += vtxArray[i].z;
+			MGlobal::displayInfo(vtxInfo);
+		}
+	}
+
+}
+
 void findCamera()
 {
 	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
@@ -42,7 +64,19 @@ void findCamera()
 	}
 
 }
+void DAGInstanced(MDagPath &child, MDagPath &parent, void* clientData)
+{
+	MStatus status;
+	if (child.node().apiType() == MFn::kMesh)
+	{
+		MFnMesh mesh(child.node(), &status);
+		if (status == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Mesh name: " + mesh.name());
+		}
 
+	}
+}
 void meshChanged(MObject & node, void* clientData)
 {
 
@@ -56,7 +90,8 @@ void meshChanged(MObject & node, void* clientData)
 void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 {
 	MStatus status;
-
+	MGlobal::displayInfo("DAG Node name: " + child.fullPathName());
+	
 	if (child.node().apiType() == MFn::kMesh)
 	{	
 		MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
@@ -72,7 +107,18 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 			{
 				MGlobal::displayInfo("MeshChanged callback added successfully!");
 			}
-		}	
+		}
+		MCallbackId DAGInstancedID = MDagMessage::addInstanceAddedDagPathCallback(
+			child,
+			DAGInstanced,
+			NULL,
+			&status
+		);
+		if (status == MS::kSuccess)
+		{
+			MGlobal::displayInfo("DAGInstance callback added!");
+		}
+	
 	}
 }
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
@@ -213,7 +259,17 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 void nodeAdded(MObject &node, void* clientData)
 {
-
+	if (node.hasFn(MFn::kMesh))
+	{
+		MStatus status;
+		MFnMesh mesh(node, &status);
+		if (status == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Hey");
+			MGlobal::displayInfo(mesh.name());
+		}
+	}
+	
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
