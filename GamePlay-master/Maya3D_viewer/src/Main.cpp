@@ -6,6 +6,35 @@
 Main game;
 Comlib* Receiver;
 
+void unPack()
+{
+	char* Package = nullptr;
+	size_t* length = new size_t(MEGABYTE * 1);
+	int Type = -1;
+
+	
+	if (Receiver->receive(Package, length))
+	{
+		memcpy(&Type, Package, sizeof(int));
+
+	}
+
+
+	switch (Type)
+	{
+
+	case 0:	
+		//	CREATE_MESH
+
+	case 1:
+		//	Another Type
+
+	default:
+		break;
+	}
+	
+}
+
 Main::Main()
     : _scene(NULL), _wireframe(false)
 {
@@ -35,9 +64,9 @@ void Main::finalize()
 void Main::update(float elapsedTime)
 {
 
+	
 
-
-
+	unPack();
     // Rotate model
     _scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
 }

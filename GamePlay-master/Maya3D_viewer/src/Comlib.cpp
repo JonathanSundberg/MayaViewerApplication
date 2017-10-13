@@ -80,7 +80,7 @@ bool Comlib::createMVOF()
 	return true;
 }
 
-bool Comlib::receive(char* msg)
+bool Comlib::receive(char* msg,size_t* length)
 {
 
 	// if we have new messages
@@ -99,8 +99,10 @@ bool Comlib::receive(char* msg)
 			ReleaseMutex(Mutex);
 			return false;
 		}
+		
 
-
+		*length = h.length;
+		msg = new char[*length];
 		size_t blocks = ceil(h.length + sizeof(Header) / 64.0);
 		size_t totalBlocksize = blocks * 64;
 

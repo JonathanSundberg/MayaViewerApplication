@@ -107,11 +107,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 					MGlobal::displayInfo(changed);
 					
-					
-					
-
-
-
 					Translation nodeTransform;
 					
 					nodeTransform.TypeHeader = MsgType::TRANSFORM_NODE_TRANSFORM;
@@ -120,12 +115,10 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					nodeTransform.Tz = TranslationZ;
 
 					memcpy(Message, &nodeTransform, sizeof(Translation));
-					
-					
 
-					
-				
-					
+					Comlib->send(Message, sizeof(Translation));
+
+
 				}
 				if (name == "r" || name == "rx" || name == "ry" || name == "rz")
 				{
