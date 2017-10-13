@@ -81,7 +81,7 @@
     <ClCompile Include="src\Main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="Comlib.cpp">
+    <ClCompile Include="src\Comlib.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -89,7 +89,7 @@
     <ClInclude Include="src\Main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Comlib.h">
+    <ClInclude Include="src\Comlib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\MayaViewerPlugin\MayaShared.h">

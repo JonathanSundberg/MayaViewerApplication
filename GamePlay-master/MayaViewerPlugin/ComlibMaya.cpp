@@ -9,6 +9,7 @@ ComlibMaya::ComlibMaya(size_t Buffsize)
 	
 	createMVOF();
 
+	Mutex = CreateMutex(nullptr, false, L"Mutex");
 }
 
 ComlibMaya::~ComlibMaya()
@@ -89,15 +90,47 @@ bool ComlibMaya::send(const void* msg, const size_t length)
 
 	size_t totalBlockSize = nrOfBlocks * 64;
 
+
+	//	if Head about to pass Tail
 	if (*Head + totalBlockSize >= *Tail && *Head < *Tail)
 	{
 		return false;
 	}
+	//	if we want to do a dummy but Tail is at 0
 	else if (*Head + totalBlockSize >= BufferSize && *Tail == 0)
 	{
 		return false;
 	}
 
-	
+	// if we have to do a dummy
+	if (*Head+totalBlockSize >= BufferSize)
+	{
+		Header* h = new Header{ DUMMY,0 };
+		memcpy(BufferStart + *Head, h, headerSize);
+		WaitForSingleObject(Mutex, INFINITE);
+		{
+			*Head = 0;
+		}
+		ReleaseMutex(Mutex);
+
+		delete h;
+		return false;
+	}
+
+	Header*h = new Header{ NORMAL,length };
+
+	memcpy(BufferStart + *Head, h, headerSize);
+
+	memcpy(BufferStart + *Head + headerSize, msg, length);
+
+
+	WaitForSingleObject(Mutex, INFINITE);
+	{
+		*Head += totalBlockSize;
+	}
+	ReleaseMutex(Mutex);
+
+	delete h;
+
 	return true;
 }
