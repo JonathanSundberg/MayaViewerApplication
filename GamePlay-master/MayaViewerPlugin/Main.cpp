@@ -7,7 +7,7 @@ using namespace std;
 #define BUFFERSIZE (200 * 1024)
 #define MEGABYTE 1024
 MCallbackIdArray myCallbackArray;
-
+//Try adding eventName callback for SelectionChange also add postUserEvent to change the void* clientData to send an MObject node to be able to work with the mesh selected after creation.
 ComlibMaya* Comlib;
 char *Message;
 
@@ -16,9 +16,32 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 {
 	MString msg("Elapsed time: ");
 	msg += elapsedTime;
-	MGlobal::displayInfo(msg);
+//	MGlobal::displayInfo(msg);
 }
+void nodeAddedToModel(MObject &node, void* clientData) {
 
+	MStatus status;
+	MGlobal::displayInfo("Node added to model type: " + (MString)node.apiTypeStr());
+	
+	MFnMesh mesh(node, &status);
+	if (status == MS::kSuccess)
+	{
+		MFloatPointArray vtxArray;
+		MGlobal::displayInfo("Node name: " + mesh.name());
+
+		mesh.getPoints(vtxArray, MSpace::kWorld);
+		int nrOfVerts = vtxArray.length();
+		MString strVerts; strVerts += nrOfVerts;
+		MGlobal::displayInfo(strVerts);
+		for (size_t i = 0; i < nrOfVerts; i++)
+		{
+			MString vtxInfo;
+			vtxInfo += "X: "; vtxInfo += vtxArray[i].x; vtxInfo += " Y: "; vtxInfo += vtxArray[i].y; vtxInfo += " Z: "; vtxInfo += vtxArray[i].z;
+			MGlobal::displayInfo(vtxInfo);
+		}
+	}
+
+}
 void getVertexTranslation(MDagPath &child)
 {
 	MStatus status;
@@ -64,19 +87,7 @@ void findCamera()
 	}
 
 }
-void DAGInstanced(MDagPath &child, MDagPath &parent, void* clientData)
-{
-	MStatus status;
-	if (child.node().apiType() == MFn::kMesh)
-	{
-		MFnMesh mesh(child.node(), &status);
-		if (status == MS::kSuccess)
-		{
-			MGlobal::displayInfo("Mesh name: " + mesh.name());
-		}
 
-	}
-}
 void meshChanged(MObject & node, void* clientData)
 {
 
@@ -91,9 +102,18 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 {
 	MStatus status;
 	MGlobal::displayInfo("DAG Node name: " + child.fullPathName());
-	
+	MGlobal::displayInfo("Parent name: " + parent.fullPathName());
+	//MStringArray eventNames;
+	//MEventMessage eventMsg;
+	//eventMsg.getEventNames(eventNames);
+	//size_t nrNames = eventNames.length();
+	//for (size_t i = 0; i < nrNames; i++)
+	//{
+	//	MGlobal::displayInfo("Event: " + eventNames[i]);
+	//}
 	if (child.node().apiType() == MFn::kMesh)
-	{	
+	{
+		MGlobal::displayInfo("NODE TYPE: " + (MString)child.node().apiTypeStr());
 		MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
 		(
 			child.node(),
@@ -108,19 +128,20 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 				MGlobal::displayInfo("MeshChanged callback added successfully!");
 			}
 		}
-		MCallbackId DAGInstancedID = MDagMessage::addInstanceAddedDagPathCallback(
-			child,
-			DAGInstanced,
-			NULL,
+		MCallbackId nodeAddedToModelID = MModelMessage::addNodeAddedToModelCallback(
+			child.node(),
+			nodeAddedToModel,
+			nullptr,
 			&status
 		);
 		if (status == MS::kSuccess)
 		{
-			MGlobal::displayInfo("DAGInstance callback added!");
+			if (myCallbackArray.append(nodeAddedToModelID) == MS::kSuccess)
+				MGlobal::displayInfo("NodeAddedToModel callback added successfully!");
 		}
-	
 	}
 }
+
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
@@ -154,11 +175,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 					MGlobal::displayInfo(changed);
 					
-					
-					
-
-
-
+	
 					Translation nodeTransform;
 					
 					nodeTransform.TypeHeader = MsgType::TRANSFORM_NODE_TRANSFORM;
@@ -167,12 +184,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					nodeTransform.Tz = TranslationZ;
 
 					memcpy(Message, &nodeTransform, sizeof(Translation));
-					
-					
-
-					
-				
-					
+	
 				}
 				if (name == "r" || name == "rx" || name == "ry" || name == "rz")
 				{
@@ -251,8 +263,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			MGlobal::displayInfo("Light Attribute Changed!");
 		}
 
-
-
 	}
 
 }
@@ -308,8 +318,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 		}
 	}
 
-
-
 	MCallbackId addNodeID = MDGMessage::addNodeAddedCallback
 	(
 		nodeAdded,
@@ -325,7 +333,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
-
 
 	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
 	(
@@ -343,6 +350,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 			MGlobal::displayInfo("Attribute changed callback added successfully!");
 		}
 	}
+
 	MCallbackId DAGChildAddedID = MDagMessage::addChildAddedCallback(
 		childAdded,
 		NULL,
@@ -355,8 +363,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
-	
-
 
 	findCamera();
 	return res;
