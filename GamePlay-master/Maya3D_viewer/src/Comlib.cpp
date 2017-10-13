@@ -80,7 +80,7 @@ bool Comlib::createMVOF()
 	return true;
 }
 
-bool Comlib::receive(char* msg,size_t* length)
+bool Comlib::receive(char* &msg,size_t* length)
 {
 
 	// if we have new messages
@@ -103,7 +103,7 @@ bool Comlib::receive(char* msg,size_t* length)
 
 		*length = h.length;
 		msg = new char[*length];
-		size_t blocks = ceil(h.length + sizeof(Header) / 64.0);
+		size_t blocks = ceil((h.length + sizeof(Header)) / 64.0);
 		size_t totalBlocksize = blocks * 64;
 
 		memcpy(msg, BufferStart + *Tail + sizeof(Header), h.length);
