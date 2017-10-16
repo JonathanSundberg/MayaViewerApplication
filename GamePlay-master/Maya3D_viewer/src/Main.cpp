@@ -9,7 +9,7 @@ Comlib* Receiver;
 void unPack()
 {
 	char* Package = nullptr;
-	size_t* length = new size_t(MEGABYTE * 1);
+	size_t* length;
 	int Type = -1;
 
 	
