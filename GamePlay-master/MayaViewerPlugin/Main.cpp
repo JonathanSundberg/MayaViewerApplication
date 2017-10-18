@@ -62,19 +62,16 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 	if (status == MS::kSuccess)
 	{
 		MFloatPointArray vtxArray;
-
-	
 		newMesh.getPoints(vtxArray);
-		
 		createdMesh.meshId = 1;
 		createdMesh.name = "TestMesh";
+
 		for (size_t i = 0; i < vtxArray.length(); i++)
 		{
 			Vertex vtx;
 			vtx.position[0] = vtxArray[i].x;
 			vtx.position[1] = vtxArray[i].y;
 			vtx.position[2] = vtxArray[i].z;
-		
 			createdMesh.vertices.push_back(vtx);
 		}
 
@@ -89,8 +86,6 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		MGlobal::displayInfo(sizeOfMesh);
 		createdMesh.vertices.clear();
 	}
-
-
 }
 
 void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
