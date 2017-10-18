@@ -64,6 +64,9 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		
 		MFloatVectorArray normals;
 		newMesh.getNormals(normals);
+		MString lengthOfNormals = "Length: ";
+		lengthOfNormals += normals.length();
+		MGlobal::displayInfo(lengthOfNormals);
 		for (int i = 0; i < normals.length(); i++)
 		{
 			float normArr[3];
