@@ -10,7 +10,7 @@ public:
 	Comlib(size_t Buffsize);
 	~Comlib();
 
-	bool receive(char* &msg, size_t* length);
+	bool receive(char* &msg, size_t* &length);
 
 private:
 
