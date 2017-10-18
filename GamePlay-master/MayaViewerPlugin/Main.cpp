@@ -61,8 +61,24 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 	MFnMesh newMesh(plug.node(), &status);
 	if (status == MS::kSuccess)
 	{
-		
-		MFloatVectorArray normals;
+		MIntArray vtxCount;
+		MIntArray vtxList;
+		newMesh.getVertices(vtxCount, vtxList);
+
+		MIntArray triCounts;
+		MIntArray triVerts;
+		newMesh.getTriangles(triCounts, triVerts);
+
+		for (int i = 0; i < newMesh.numPolygons(); i++)
+		{
+			for (size_t i = 0; i < triCounts[i]; i++)
+			{
+				
+				MString triMsg = "TriVerts: X: "; 
+				MGlobal::displayInfo(triMsg);
+			}
+		}
+	/*	MFloatVectorArray normals;
 		newMesh.getNormals(normals);
 		MString lengthOfNormals = "Length: ";
 		lengthOfNormals += normals.length();
@@ -71,7 +87,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		{
 			float normArr[3];
 			normals[i].get(normArr);
-			MString normalMsg = "Normal[" + i;
+			MString normalMsg = "Normal["; normalMsg += i;
 			normalMsg += "]: X: ";
 			normalMsg += normArr[0];
 			normalMsg += " Y: ";
@@ -79,7 +95,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			normalMsg += " Z: ";
 			normalMsg += normArr[2];
 			MGlobal::displayInfo(normalMsg);
-		}
+		}*/
 
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray);
