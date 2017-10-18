@@ -7,9 +7,9 @@ using namespace std;
 #define BUFFERSIZE (200 * 1024)
 #define MEGABYTE 1024
 MCallbackIdArray myCallbackArray;
-//Try adding eventName callback for SelectionChange also add postUserEvent to change the void* clientData to send an MObject node to be able to work with the mesh selected after creation.
-// https://nccastaff.bournemouth.ac.uk/jmacey/RobTheBloke/www/maya/MSelectionList.html //Maya selection guide
+MCallbackId meshCreatedId;
 ComlibMaya* Comlib;
+Mesh createdMesh;
 char *Message;
 
 size_t length;
@@ -18,32 +18,6 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 	MString msg("Elapsed time: ");
 	msg += elapsedTime;
 //	MGlobal::displayInfo(msg);
-}
-
-void nodeAddedToModel(MObject &node, void* clientData) {
-
-	MStatus status;
-	MGlobal::displayInfo("Node added to model type: " + (MString)node.apiTypeStr());
-	
-	MFnMesh mesh(node, &status);
-	if (status == MS::kSuccess)
-	{
-		MFloatPointArray vtxArray;
-		MGlobal::displayInfo("Node name: " + mesh.name());
-
-		mesh.getPoints(vtxArray, MSpace::kWorld);
-		int nrOfVerts = vtxArray.length();
-		MString strVerts; strVerts += nrOfVerts;
-		MGlobal::displayInfo(strVerts);
-		for (size_t i = 0; i < nrOfVerts; i++)
-		{
-			MString vtxInfo;
-			vtxInfo += "X: "; vtxInfo += vtxArray[i].x; vtxInfo += " Y: "; vtxInfo += vtxArray[i].y; vtxInfo += " Z: "; vtxInfo += vtxArray[i].z;
-			MGlobal::displayInfo(vtxInfo);
-		}
-	}
-	MFnMesh tempMesh = node;
-	MGlobal::displayInfo("Mesh name: " + tempMesh.name());
 }
 
 
@@ -81,19 +55,44 @@ void meshChanged(MObject & node, void* clientData)
 	MGlobal::displayInfo(msg);
 
 }
-void attrAdded(MNodeMessage::AttributeMessage msg, MPlug &plug, void *clientData)
+void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
-	if (msg & MNodeMessage::AttributeMessage::kAttributeAdded)
+	MStatus status;
+	MFnMesh newMesh(plug.node(), &status);
+	if (status == MS::kSuccess)
 	{
-		MGlobal::displayInfo("Attribute added!!");
-		MStatus status;
-		MFnMesh mesh(plug.node(), &status);
-		if (status == MS::kSuccess)
+		MFloatPointArray vtxArray;
+
+	
+		newMesh.getPoints(vtxArray);
+		
+		createdMesh.meshId = 1;
+		createdMesh.name = "TestMesh";
+		for (size_t i = 0; i < vtxArray.length(); i++)
 		{
-			MGlobal::displayInfo("Attribute ADDED!!!");
+			Vertex vtx;
+			vtx.position[0] = vtxArray[i].x;
+			vtx.position[1] = vtxArray[i].y;
+			vtx.position[2] = vtxArray[i].z;
+		
+			createdMesh.vertices.push_back(vtx);
 		}
+
+		MMessage::removeCallback(meshCreatedId);
+		for (int i = 0; i < createdMesh.vertices.size(); i++)
+		{
+			MString msg = "Vtx["; msg += i; msg += "]: X: "; msg += createdMesh.vertices[i].position[0]; msg += " Y: "; msg += createdMesh.vertices[i].position[1]; msg += " Z: "; msg += createdMesh.vertices[i].position[2];
+			MGlobal::displayInfo(msg);
+		}
+		int structSize = sizeof(createdMesh);
+		MString sizeOfMesh = "Mesh struct size: "; sizeOfMesh += structSize;
+		MGlobal::displayInfo(sizeOfMesh);
+		createdMesh.vertices.clear();
 	}
+
+
 }
+
 void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 {
 	MStatus status;
@@ -114,38 +113,18 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 				//MGlobal::displayInfo("MeshChanged callback added successfully!");
 			}
 		}
-		MCallbackId nodeAddedToModelID = MModelMessage::addNodeAddedToModelCallback(
+		meshCreatedId = MNodeMessage::addAttributeChangedCallback(
 			child.node(),
-			nodeAddedToModel,
-			nullptr,
-			&status
-		);
-		if (status == MS::kSuccess)
-		{
-			if (myCallbackArray.append(nodeAddedToModelID) == MS::kSuccess) {
-
-				//	MGlobal::displayInfo("NodeAddedToModel callback added successfully!");
-			}
-		}
-
-		MCallbackId attrAddedId = MNodeMessage::addAttributeAddedOrRemovedCallback(
-			child.node(),
-			attrAdded,
+			getNewMeshData,
 			NULL,
 			&status
 		);
-		if (status == MS::kSuccess)
-		{
-			if (myCallbackArray.append(attrAddedId) == MS::kSuccess)
-			{
-				MGlobal::displayInfo("Attribute added/removed callback added successfully!");
-			}
-		}
 	}
 }
 
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
+//	MGlobal::displayInfo("Plug name: " + plug.name());
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
 		MStatus status;
@@ -367,12 +346,12 @@ EXPORT MStatus initializePlugin(MObject obj)
 	}
 
 
-	MStringArray eventNames;
-	MEventMessage::getEventNames(eventNames);
-	for (size_t i = 0; i < eventNames.length(); i++)
-	{
-		MGlobal::displayInfo(eventNames[i]);
-	}
+	//MStringArray eventNames;
+	//MEventMessage::getEventNames(eventNames);
+	//for (size_t i = 0; i < eventNames.length(); i++)
+	//{
+	//	MGlobal::displayInfo(eventNames[i]);
+	//}
 
 	findCamera();
 	return res;

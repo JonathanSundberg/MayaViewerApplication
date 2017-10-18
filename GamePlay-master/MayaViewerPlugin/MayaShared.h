@@ -1,5 +1,5 @@
 #pragma once
-
+#include <vector>
 enum class MsgType
 {
 	VERTEX_TRANSLATION,
@@ -32,4 +32,11 @@ struct Scaling
 	double ScaleY;
 	double ScaleZ;
 };
-
+struct Vertex {
+	double position[3];
+};
+struct Mesh {
+	string name;
+	int meshId;
+	vector<Vertex> vertices;
+};
