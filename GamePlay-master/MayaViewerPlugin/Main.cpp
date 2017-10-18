@@ -81,25 +81,114 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 {
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
+		
 
+		
+
+
+		/////////////////	MATERIAL	///////////////////
 		if (plug.node().hasFn(MFn::kLambert))
 		{
+			MStatus status;
 			MGlobal::displayInfo(plug.name());
 			MGlobal::displayInfo("Material attribute changed");
+			MGlobal::displayInfo(plug.node().apiTypeStr());
+			MFnLambertShader MyLambert(plug.node());
+
+			
+			MGlobal::displayInfo(MyLambert.absoluteName());
+
+			MColor transp = MyLambert.transparency();
+			MColor incan = MyLambert.incandescence();
+			MColor diffuse = MyLambert.diffuseCoeff(); // ??
+			MColor myColor = MyLambert.color();
+			MString print;
+			MPlugArray myPlugs;
+			MPlug myPlug = MyLambert.findPlug("color");
+			MPlug outColorPlug;
+			myPlug.connectedTo(myPlugs, true, false);
+
+			if (myPlugs.length()>0)
+			{
+
+				for (size_t i = 0; i < myPlugs.length(); i++)
+				{
+					MGlobal::displayInfo("myPlug connected plugs: ");
+					MGlobal::displayInfo(myPlugs[i].name());
+					outColorPlug = myPlugs[i];
+					MGlobal::displayInfo(outColorPlug.node().apiTypeStr());
+				}
+			
+				MFnDependencyNode textureNode = outColorPlug.node();
+				MPlug PathPlug = textureNode.findPlug("fileTextureName");
+
+				MString texturename;
+				PathPlug.getValue(texturename);
+				MGlobal::displayInfo("Texture name: ");
+				MGlobal::displayInfo(texturename);
+			}
+			
+			
+
+			/*print += myColor.r;
+			print += " ";
+			print += myColor.g;
+			print += " ";
+			print += myColor.b;
+			print += " ";
+			print += myColor.a;*/
+
+			/*print += transp.r;
+			print += " ";
+			print += transp.g;
+			print += " ";
+			print += transp.b;
+			print += " ";
+			print += transp.a;*/
+
+			/*print += incan.r;
+			print += " ";
+			print += incan.g;
+			print += " ";
+			print += incan.b;
+			print += " ";
+			print += incan.a;*/
+
+			/*print += diffuse.r;
+			print += " ";
+			print += diffuse.g;
+			print += " ";
+			print += diffuse.b;
+			print += " ";
+			print += diffuse.a;*/
+
+			//MGlobal::displayInfo(print);
 		}
 		MStatus status;
 		
-		//MGlobal::displayInfo(plug.parent().partialName(false,false,false,false,true,false,NULL));
+		if (plug.node().apiType() != MFn::Type::kCamera)
+		{
+			MGlobal::displayInfo(plug.parent().partialName(false,false,false,false,true,false,NULL));
 		
-		//MGlobal::displayInfo(plug.name());
+			MGlobal::displayInfo(plug.name());
+
+			MGlobal::displayInfo(plug.partialName());
+
+			MGlobal::displayInfo(plug.node().apiTypeStr());
+		}
+
+		/////////////////	CAMERA	///////////////////
 		if (plug.node().apiType() == MFn::Type::kCamera)
 		{
-			MGlobal::displayInfo("Camera attribute changed");
-			MGlobal::displayInfo(plug.name());
+			/*MGlobal::displayInfo("Camera attribute changed");
+			MGlobal::displayInfo(plug.name());*/
 		}
+
+		/////////////////	TRANSFORM	///////////////////
 		if (plug.node().apiType() == MFn::Type::kTransform)
 		{
 
+			
 			MFnTransform transNode(plug.node(), &status);
 			MFnDagNode myNode(plug.node());
 		
@@ -165,6 +254,9 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				MGlobal::displayError(status.errorString());
 			}
 		}
+
+
+		/////////////////	MESH	///////////////////
 		else if (plug.node().apiType() == MFn::Type::kMesh)
 		{
 
@@ -177,105 +269,108 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				{
 					MFnMesh myMesh(plug.node(), &status);
 
-					MObjectArray Shaders;
-					MIntArray myInts;
-					myMesh.getConnectedShaders(0, Shaders, myInts);
+					//MObjectArray Shaders;
+					//MIntArray myInts;
+					//myMesh.getConnectedShaders(0, Shaders, myInts);
 
-					for (size_t i = 0; i < Shaders.length(); i++)
-					{
-						MPlug plug;
-						MPlugArray connections;
-						MFnDependencyNode shaderGroup(Shaders[i]);
+					//for (size_t i = 0; i < Shaders.length(); i++)
+					//{
+					//	MPlug plug;
+					//	MPlugArray connections;
+					//	MFnDependencyNode shaderGroup(Shaders[i]);
 
-						MString shaderName = shaderGroup.absoluteName();
-						MColor myColor;
-						MPlug shaderPlug = shaderGroup.findPlug("surfaceShader");
-						
-						shaderPlug.connectedTo(connections, true, false);
-						
-						for (size_t l = 0; l < connections.length(); l++)
-						{
-							MGlobal::displayInfo(connections[l].name());
+					//	MString shaderName = shaderGroup.absoluteName();
+					//	MColor myColor;
+					//	MPlug shaderPlug = shaderGroup.findPlug("surfaceShader");
+					//	
+					//	shaderPlug.connectedTo(connections, true, false);
+					//	
+					//	for (size_t l = 0; l < connections.length(); l++)
+					//	{
+					//		MGlobal::displayInfo(connections[l].name());
 
-							if (connections[l].node().hasFn(MFn::kLambert))
-							{
-								MGlobal::displayInfo("Lambert");
-								MFnLambertShader lambShader(connections[l].node());
-								
-								myColor = lambShader.color();
-								MString print;
-								print += myColor.r;
-								print += " ";
-								print += myColor.g;
-								print += " ";
-								print += myColor.b;
-								print += " ";
-								print += myColor.a;
-								
-								MGlobal::displayInfo(print);
-								MPlugArray colorPlug;
-								lambShader.findPlug("color").connectedTo(colorPlug, true, false);
-								
-								for (size_t p = 0; p < colorPlug.length(); p++)
-								{
-									MGlobal::displayInfo("Texture: ");
-									MGlobal::displayInfo(colorPlug[p].name());
-									
-								}
+					//		if (connections[l].node().hasFn(MFn::kLambert))
+					//		{
+					//			MGlobal::displayInfo("Lambert");
+					//			MFnLambertShader lambShader(connections[l].node());
+					//			
+					//			MColor transp = lambShader.transparency();
+					//			MColor incan = lambShader.incandescence();
+					//			MColor diffuse = lambShader.diffuseCoeff(); // ??
+					//			myColor = lambShader.color();
+					//			MString print;
+					//			print += myColor.r;
+					//			print += " ";
+					//			print += myColor.g;
+					//			print += " ";
+					//			print += myColor.b;
+					//			print += " ";
+					//			print += myColor.a;
+					//			
+					//			MGlobal::displayInfo(print);
+					//			MPlugArray colorPlug;
+					//			lambShader.findPlug("color").connectedTo(colorPlug, true, false);
+					//			
+					//			for (size_t p = 0; p < colorPlug.length(); p++)
+					//			{
+					//				MGlobal::displayInfo("Texture: ");
+					//				MGlobal::displayInfo(colorPlug[p].name());
+					//				
+					//			}
 
-							}
-							
-							
-						}
+					//		}
+					//		
+					//		
+					//	}
 
-						MObject material;
-						MStatus check;
+					//	MObject material;
+					//	MStatus check;
 
-						MString color("color");
+					//	MString color("color");
 
-						MFnDependencyNode fnDependNode(material);
+					//	MFnDependencyNode fnDependNode(material);
 
-						MPlug myPlug = fnDependNode.findPlug(color,check);
-						if (check == MS::kSuccess)
-						{
-							MString print("myPlug: ");
-							print += myPlug.name();
-							MGlobal::displayInfo(print);
+					//	MPlug myPlug = fnDependNode.findPlug(color,check);
+					//	if (check == MS::kSuccess)
+					//	{
+					//		MString print("myPlug: ");
+					//		print += myPlug.name();
+					//		MGlobal::displayInfo(print);
 
-							MPlugArray cc;
-							plug.connectedTo(cc, true, false);
+					//		MPlugArray cc;
+					//		plug.connectedTo(cc, true, false);
 
-							if (cc.length() > 0)
-							{
-								MGlobal::displayInfo(cc[0].name());
-								MObject src = cc[0];
-								if (src.hasFn(MFn::kFileTexture))
-								{
-									MFnDependencyNode fnFile(src);
+					//		if (cc.length() > 0)
+					//		{
+					//			MGlobal::displayInfo(cc[0].name());
+					//			MObject src = cc[0];
+					//			if (src.hasFn(MFn::kFileTexture))
+					//			{
+					//				MFnDependencyNode fnFile(src);
 
-								}
-							}
+					//			}
+					//		}
 
-						}
+					//	}
 
 
-						
+					//	
 
-						for (size_t j = 0; j < connections.length(); j++)
-						{
-							if (connections[j].node().hasFn(MFn::kLambert))
-							{
-								MPlugArray plugs;
-								MFnLambertShader lamberShader(connections[j].node());
-								lamberShader.findPlug("color").connectedTo(plugs, true, false);
+					//	for (size_t j = 0; j < connections.length(); j++)
+					//	{
+					//		if (connections[j].node().hasFn(MFn::kLambert))
+					//		{
+					//			MPlugArray plugs;
+					//			MFnLambertShader lamberShader(connections[j].node());
+					//			lamberShader.findPlug("color").connectedTo(plugs, true, false);
 
-								for (size_t u = 0; u < plugs.length(); u++)
-								{
-									MGlobal::displayInfo(plugs[u].name());
-								}
-							}
-						}
-					}
+					//			for (size_t u = 0; u < plugs.length(); u++)
+					//			{
+					//				MGlobal::displayInfo(plugs[u].name());
+					//			}
+					//		}
+					//	}
+					//}
 
 					
 					
@@ -308,9 +403,45 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 						MGlobal::displayError(status.errorString());
 					}
 				}
+				else if (plug.partialName() == "pv")
+				{
+
+					MFnMesh myMesh(plug.node(), &status);
+					// UV stuff;
+					MFloatArray UArr;
+					MFloatArray VArr;
+
+					myMesh.getUVs(UArr, VArr);
+
+					for (uint i = 0; i < UArr.length(); i++)
+					{
+						MString msg;
+						msg += "U array at: ";
+						msg += "[";
+						msg += i;
+						msg += "]";
+						msg += " ";
+						msg += UArr[i];
+						MGlobal::displayInfo(msg);
+					}
+					for (uint j = 0; j < VArr.length(); j++)
+					{
+						MString msg;
+						msg += "V array at: ";
+						msg += "[";
+						msg += j;
+						msg += "]";
+						msg += " ";
+						msg += VArr[j];
+						MGlobal::displayInfo(msg);
+					}
+
+
+				}
 			
 		}
 
+		/////////////////	POINTLIGHTS		///////////////////
 		if (plug.node().apiType() == MFn::kPointLight)
 		{
 			MGlobal::displayInfo("Light Attribute Changed!");
