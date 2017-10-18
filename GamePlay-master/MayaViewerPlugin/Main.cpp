@@ -61,6 +61,23 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 	MFnMesh newMesh(plug.node(), &status);
 	if (status == MS::kSuccess)
 	{
+		
+		MFloatVectorArray normals;
+		newMesh.getNormals(normals);
+		for (int i = 0; i < normals.length(); i++)
+		{
+			float normArr[3];
+			normals[i].get(normArr);
+			MString normalMsg = "Normal[" + i;
+			normalMsg += "]: X: ";
+			normalMsg += normArr[0];
+			normalMsg += " Y: ";
+			normalMsg += normArr[1];
+			normalMsg += " Z: ";
+			normalMsg += normArr[2];
+			MGlobal::displayInfo(normalMsg);
+		}
+
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray);
 		createdMesh.meshId = 1;
