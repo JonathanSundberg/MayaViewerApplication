@@ -78,7 +78,7 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 	}
 }
 
-void recursiveTransform(MFnDagNode& Parent)
+void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 {
 	MStatus status;
 	MGlobal::displayInfo("Entered rekursive transform");
@@ -95,7 +95,7 @@ void recursiveTransform(MFnDagNode& Parent)
 		if (Parent.child(i).apiType() == MFn::Type::kTransform)
 		{
 			MFnDagNode childDag = Parent.child(i);
-			recursiveTransform(childDag);
+			recursiveTransform(childDag,cameraTransform);
 		}
 	}
 
@@ -194,9 +194,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 {
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
-		
-
-		
 
 
 		/////////////////	MATERIAL	///////////////////
@@ -293,23 +290,28 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		/////////////////	CAMERA	///////////////////
 		if (plug.node().apiType() == MFn::Type::kCamera)
 		{
-			/*MGlobal::displayInfo("Camera attribute changed");
-			MGlobal::displayInfo(plug.name());*/
+			MGlobal::displayInfo("Camera attribute changed");
+			MGlobal::displayInfo(plug.name());
+			MGlobal::displayInfo(plug.node().apiTypeStr());
 		}
 
 		/////////////////	TRANSFORM	///////////////////
 		if (plug.node().apiType() == MFn::Type::kTransform)
 		{
 			
-			
+			MFnTransform myTrans(plug.node());
 			MFnDagNode myNode(plug.node());
 
-			recursiveTransform(myNode);
-			
-			
-			
-			
+			if (myTrans.name() == "persp")
+			{
+				//recursive with camera
+				recursiveTransform(myNode, true);
+			}
+			else
+			{
 
+				recursiveTransform(myNode,false);
+			}
 			
 		}
 
