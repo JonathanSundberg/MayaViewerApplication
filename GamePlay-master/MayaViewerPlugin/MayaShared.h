@@ -35,8 +35,19 @@ struct Scaling
 struct Vertex {
 	double position[3];
 };
+struct Normal
+{
+	double normal[3];
+};
 struct Mesh {
+	int sizeOfVtxIndex;
+	int sizeOfVertices;
+	int sizeOfNormals;
+	int sizeOfNormalIndex;
 	string name;
 	int meshId;
+	vector<int> normalIndices;
+	vector<Normal> normals;
+	vector<int> vtxIndices;
 	vector<Vertex> vertices;
 };

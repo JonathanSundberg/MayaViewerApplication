@@ -61,66 +61,71 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 	MFnMesh newMesh(plug.node(), &status);
 	if (status == MS::kSuccess)
 	{
+		//getting vertex index data
 		MIntArray vtxCount;
 		MIntArray vtxList;
 		newMesh.getVertices(vtxCount, vtxList);
-
-		MIntArray triCounts;
-		MIntArray triVerts;
-		newMesh.getTriangles(triCounts, triVerts);
-
-		for (int i = 0; i < newMesh.numPolygons(); i++)
+		//cerr << "Vtxlist index length: " << vtxList.length() << endl;
+		int *indexArray = new int[vtxList.length()];
+		vtxList.get(indexArray);
+		for (size_t i = 0; i < vtxList.length(); i++)
 		{
-			for (size_t i = 0; i < triCounts[i]; i++)
-			{
-				
-				MString triMsg = "TriVerts: X: "; 
-				MGlobal::displayInfo(triMsg);
-			}
+			//cerr << "VTXIndex: " << indexArray[i] << endl;
+			createdMesh.vtxIndices.push_back(indexArray[i]);
+			
 		}
-	/*	MFloatVectorArray normals;
-		newMesh.getNormals(normals);
-		MString lengthOfNormals = "Length: ";
-		lengthOfNormals += normals.length();
-		MGlobal::displayInfo(lengthOfNormals);
-		for (int i = 0; i < normals.length(); i++)
-		{
-			float normArr[3];
-			normals[i].get(normArr);
-			MString normalMsg = "Normal["; normalMsg += i;
-			normalMsg += "]: X: ";
-			normalMsg += normArr[0];
-			normalMsg += " Y: ";
-			normalMsg += normArr[1];
-			normalMsg += " Z: ";
-			normalMsg += normArr[2];
-			MGlobal::displayInfo(normalMsg);
-		}*/
+		createdMesh.sizeOfVtxIndex = createdMesh.vtxIndices.size();
 
+		//Getting vertex data
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray);
 		createdMesh.meshId = 1;
 		createdMesh.name = "TestMesh";
-
-		for (size_t i = 0; i < vtxArray.length(); i++)
+		//cerr << "Vertex count: " << vtxArray.length() << endl;
+		for (size_t i = 0; i < vtxArray.length(); i++) 
 		{
 			Vertex vtx;
-			vtx.position[0] = vtxArray[i].x;
-			vtx.position[1] = vtxArray[i].y;
-			vtx.position[2] = vtxArray[i].z;
+			vtx.position[0] = (double)vtxArray[i].x;
+			vtx.position[1] = (double)vtxArray[i].y;
+			vtx.position[2] = (double)vtxArray[i].z;
 			createdMesh.vertices.push_back(vtx);
 		}
+		createdMesh.sizeOfVertices = createdMesh.vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
-		MMessage::removeCallback(meshCreatedId);
-		for (int i = 0; i < createdMesh.vertices.size(); i++)
+		//Getting normal data
+		MFloatVectorArray normals;
+		newMesh.getNormals(normals);
+		//cerr << "Size of normal arr: " << normals.length() << endl; 
+		for (size_t i = 0; i < normals.length(); i++)
 		{
-			MString msg = "Vtx["; msg += i; msg += "]: X: "; msg += createdMesh.vertices[i].position[0]; msg += " Y: "; msg += createdMesh.vertices[i].position[1]; msg += " Z: "; msg += createdMesh.vertices[i].position[2];
-			MGlobal::displayInfo(msg);
+			Normal meshNormal;
+			float arr[3];
+			normals[i].get(arr);
+		//	cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
+			meshNormal.normal[0] = (double)arr[0];
+			meshNormal.normal[1] = (double)arr[1];
+			meshNormal.normal[2] = (double)arr[2];
+			createdMesh.normals.push_back(meshNormal);
 		}
-		int structSize = sizeof(createdMesh);
-		MString sizeOfMesh = "Mesh struct size: "; sizeOfMesh += structSize;
-		MGlobal::displayInfo(sizeOfMesh);
+		createdMesh.sizeOfNormals = createdMesh.normals.size();
+
+		//Getting normal indices
+		MIntArray normalCounts;
+		MIntArray meshNormalIds;
+		newMesh.getNormalIds(normalCounts, meshNormalIds);
+		//cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
+		for (size_t i = 0; i < meshNormalIds.length(); i++)
+		{
+			createdMesh.normalIndices.push_back(meshNormalIds[i]);
+		}
+		createdMesh.sizeOfNormalIndex = createdMesh.normalIndices.size();
+		
 		createdMesh.vertices.clear();
+		createdMesh.vtxIndices.clear();
+		createdMesh.normals.clear();
+		createdMesh.normalIndices.clear();
+		MMessage::removeCallback(meshCreatedId);//Removes the callback
+		delete[] indexArray;
 	}
 }
 
