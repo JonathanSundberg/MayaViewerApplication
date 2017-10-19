@@ -1,7 +1,39 @@
 #include "Main.h"
+#include "Comlib.h"
+#include "MayaShared.h"
 
 // Declare our game instance
 Main game;
+Comlib* Receiver;
+
+void unPack()
+{
+	char* Package = nullptr;
+	size_t* length;
+	int Type = -1;
+
+	
+	if (Receiver->receive(Package, length))
+	{
+		memcpy(&Type, Package, sizeof(int));
+
+	}
+
+
+	switch (Type)
+	{
+
+	case 0:	
+		//	CREATE_MESH
+
+	case 1:
+		//	Another Type
+
+	default:
+		break;
+	}
+	
+}
 
 Main::Main()
     : _scene(NULL), _wireframe(false)
@@ -20,6 +52,8 @@ void Main::initialize()
 
     // Set the aspect ratio for the scene's camera to match the current resolution
     _scene->getActiveCamera()->setAspectRatio(getAspectRatio());
+
+	Receiver = new Comlib(BUFFERSIZE);
 }
 
 void Main::finalize()
@@ -29,6 +63,10 @@ void Main::finalize()
 
 void Main::update(float elapsedTime)
 {
+
+	
+
+	unPack();
     // Rotate model
     _scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
 }

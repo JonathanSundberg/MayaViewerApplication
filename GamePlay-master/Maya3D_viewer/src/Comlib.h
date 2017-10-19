@@ -10,12 +10,25 @@ public:
 	Comlib(size_t Buffsize);
 	~Comlib();
 
-	
+	bool receive(char* &msg, size_t* &length);
 
+private:
 
 	size_t BufferSize;
 	size_t* Head;
 	size_t* Tail;
+
+	enum TYPE
+	{
+		NORMAL,
+		DUMMY
+	};
+
+	struct Header
+	{
+		TYPE msgId;
+		size_t length;
+	};
 
 	void*viewP;
 	char*BuffPtr;
@@ -27,8 +40,8 @@ public:
 
 	HANDLE hFileMapping;
 
-
-	bool receive();
+	HANDLE Mutex;
+	
 
 	bool createFileMap();
 	bool createMVOF();

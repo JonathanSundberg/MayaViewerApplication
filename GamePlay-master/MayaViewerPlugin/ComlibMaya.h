@@ -16,7 +16,7 @@ private:
 	size_t BufferSize;
 	size_t* Head;
 	size_t* Tail;
-	enum class TYPE
+	enum TYPE
 	{
 		NORMAL,
 		DUMMY
