@@ -8,7 +8,7 @@ using namespace std;
 MCallbackIdArray myCallbackArray;
 MCallbackId meshCreatedId;
 ComlibMaya* Comlib;
-Mesh createdMesh;
+
 char *Message;
 
 size_t length;
@@ -63,6 +63,14 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 	MFnMesh newMesh(plug.node(), &status);
 	if (status == MS::kSuccess)
 	{
+		vector<int> normalIndices;
+		vector<Normal> meshNormals;
+		vector<int> vtxIndices;
+		vector<Vertex> vertices;
+		
+
+		MayaMesh createdMesh;
+		createdMesh.headerType = MsgType::CREATE_MESH;
 		//getting vertex index data
 		MIntArray vtxCount;
 		MIntArray vtxList;
@@ -72,16 +80,14 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		vtxList.get(indexArray);
 		for (size_t i = 0; i < vtxList.length(); i++)
 		{
-			//cerr << "VTXIndex: " << indexArray[i] << endl;
-			createdMesh.vtxIndices.push_back(indexArray[i]);
-			
+			cerr << "VTXIndex: " << indexArray[i] << endl;
+			vtxIndices.push_back(indexArray[i]);
 		}
-		createdMesh.sizeOfVtxIndex = createdMesh.vtxIndices.size();
+		createdMesh.sizeOfVtxIndex = vtxIndices.size();
 
 		//Getting vertex data
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray);
-		createdMesh.meshId = 1;
 		createdMesh.name = "TestMesh";
 		//cerr << "Vertex count: " << vtxArray.length() << endl;
 		for (size_t i = 0; i < vtxArray.length(); i++) 
@@ -90,9 +96,10 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			vtx.position[0] = (double)vtxArray[i].x;
 			vtx.position[1] = (double)vtxArray[i].y;
 			vtx.position[2] = (double)vtxArray[i].z;
-			createdMesh.vertices.push_back(vtx);
+			vertices.push_back(vtx);
+			cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
 		}
-		createdMesh.sizeOfVertices = createdMesh.vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
+		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
 		//Getting normal data
 		MFloatVectorArray normals;
@@ -103,13 +110,13 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			Normal meshNormal;
 			float arr[3];
 			normals[i].get(arr);
-		//	cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
+			cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
 			meshNormal.normal[0] = (double)arr[0];
 			meshNormal.normal[1] = (double)arr[1];
 			meshNormal.normal[2] = (double)arr[2];
-			createdMesh.normals.push_back(meshNormal);
+			meshNormals.push_back(meshNormal);
 		}
-		createdMesh.sizeOfNormals = createdMesh.normals.size();
+		createdMesh.sizeOfNormals = meshNormals.size();
 
 		//Getting normal indices
 		MIntArray normalCounts;
@@ -118,14 +125,25 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		//cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
 		for (size_t i = 0; i < meshNormalIds.length(); i++)
 		{
-			createdMesh.normalIndices.push_back(meshNormalIds[i]);
+			normalIndices.push_back(meshNormalIds[i]);
 		}
-		createdMesh.sizeOfNormalIndex = createdMesh.normalIndices.size();
+		createdMesh.sizeOfNormalIndex = normalIndices.size();
+		//**** Send mesh to gameplay
+		size_t totalsize = 0;
+		totalsize = sizeof(createdMesh);
+		memcpy(Message, &createdMesh, totalsize);
+		totalsize += (sizeof(int) * vtxIndices.size());
+		memcpy(Message + sizeof(createdMesh), vtxIndices.data(), totalsize);
+		totalsize += (sizeof(Vertex) * vertices.size());
+		memcpy(Message + (sizeof(int) * vtxIndices.size()) + sizeof(createdMesh), vertices.data(), totalsize);
 		
-		createdMesh.vertices.clear();
-		createdMesh.vtxIndices.clear();
-		createdMesh.normals.clear();
-		createdMesh.normalIndices.clear();
+
+		Comlib->send(Message, totalsize);
+		//*******************************
+		vertices.clear();
+		vtxIndices.clear();
+		meshNormals.clear();
+		normalIndices.clear();
 		MMessage::removeCallback(meshCreatedId);//Removes the callback
 		delete[] indexArray;
 	}

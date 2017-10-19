@@ -6,6 +6,24 @@
 Main game;
 Comlib* Receiver;
 
+void CreateMesh(char* msg)
+{
+	vector<Vertex> vtxVector;
+	MayaMesh meshRecieved;
+	memcpy(&meshRecieved, msg, sizeof(MayaMesh));
+	
+
+	int* normIndexArr = new int[meshRecieved.sizeOfVtxIndex];
+	memcpy(normIndexArr, msg + sizeof(MayaMesh), sizeof(int) * meshRecieved.sizeOfVtxIndex);
+	Vertex vertex;
+	for (size_t i = 0; i < meshRecieved.sizeOfVertices; i++)
+	{
+		memcpy(&vertex, msg + sizeof(MayaMesh) + (sizeof(int) * meshRecieved.sizeOfVtxIndex), sizeof(double) * 3);
+	}
+
+
+
+}
 void unPack()
 {
 	char* Package = nullptr;
@@ -25,7 +43,7 @@ void unPack()
 
 	case 0:	
 		//	CREATE_MESH
-
+		CreateMesh(Package);
 	case 1:
 		//	Another Type
 

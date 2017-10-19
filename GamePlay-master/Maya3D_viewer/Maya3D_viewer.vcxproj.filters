@@ -92,8 +92,5 @@
     <ClInclude Include="src\Comlib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MayaViewerPlugin\MayaShared.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
