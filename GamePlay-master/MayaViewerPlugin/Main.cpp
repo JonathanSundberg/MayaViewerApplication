@@ -184,12 +184,6 @@ void recursiveTransform(MFnDagNode& Parent)
 	{
 
 		//MString name = plug.partialName();
-
-
-
-
-
-
 		double scale[3] = { 0,0,0 };
 		double RotationX, RotationY, RotationZ, RotationW;
 		double TranslationX, TranslationY, TranslationZ;
@@ -198,7 +192,6 @@ void recursiveTransform(MFnDagNode& Parent)
 		//{
 
 			MString changed;
-
 
 			TranslationX = transNode.getTranslation(MSpace::kWorld).x;
 			TranslationY = transNode.getTranslation(MSpace::kWorld).y;
@@ -210,19 +203,12 @@ void recursiveTransform(MFnDagNode& Parent)
 			changed += TranslationY;
 			changed += " ";
 			changed += TranslationZ;
-			
-
-
-			
-
-			
 
 		//}
 		//if (name == "r" || name == "rx" || name == "ry" || name == "rz")
 		//{
 
 			transNode.getRotationQuaternion(RotationX, RotationY, RotationZ, RotationW, MSpace::kWorld);
-			
 
 			changed += " R: ";
 			changed += RotationX;
@@ -236,7 +222,6 @@ void recursiveTransform(MFnDagNode& Parent)
 		//{
 
 			transNode.getScale(scale);
-			
 
 			changed += " S: ";
 			changed += scale[0];
@@ -246,7 +231,6 @@ void recursiveTransform(MFnDagNode& Parent)
 			changed += scale[2];
 			MGlobal::displayInfo(changed);
 		//}
-
 
 			// send TRS data
 
@@ -275,10 +259,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 {
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
-		
-
-		
-
 
 		/////////////////	MATERIAL	///////////////////
 		if (plug.node().hasFn(MFn::kLambert))
@@ -289,7 +269,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			MGlobal::displayInfo(plug.node().apiTypeStr());
 			MFnLambertShader MyLambert(plug.node());
 
-			
 			MGlobal::displayInfo(MyLambert.absoluteName());
 
 			MColor transp = MyLambert.transparency();
@@ -321,8 +300,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				MGlobal::displayInfo("Texture name: ");
 				MGlobal::displayInfo(texturename);
 			}
-			
-			
 
 			/*print += myColor.r;
 			print += " ";
@@ -381,26 +358,14 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		/////////////////	TRANSFORM	///////////////////
 		if (plug.node().apiType() == MFn::Type::kTransform)
 		{
-			
-			
 			MFnDagNode myNode(plug.node());
-
 			recursiveTransform(myNode);
-			
-			
-			
-			
-
-			
 		}
 
 
 		/////////////////	MESH	///////////////////
 		else if (plug.node().apiType() == MFn::Type::kMesh)
 		{
-
-			
-
 				MFnAttribute myAttr = plug.attribute();
 				MString attributeName = myAttr.name();
 
@@ -508,8 +473,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					//	}
 					//}
 
-					
-					
 					if (status)
 					{
 						if (plug.logicalIndex() < 100000) // for not printing out some weird index
@@ -571,10 +534,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 						msg += VArr[j];
 						MGlobal::displayInfo(msg);
 					}
-
-
 				}
-			
 		}
 
 		/////////////////	POINTLIGHTS		///////////////////
@@ -582,9 +542,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		{
 			MGlobal::displayInfo("Light Attribute Changed!");
 		}
-
 	}
-
 }
 
 void nodeAdded(MObject &node, void* clientData)
