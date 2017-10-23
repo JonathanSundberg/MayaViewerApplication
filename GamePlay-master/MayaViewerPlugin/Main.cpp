@@ -61,13 +61,38 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 {
 	MStatus status;
 	MFnMesh newMesh(plug.node(), &status);
+
 	if (status == MS::kSuccess)
 	{
 		vector<int> normalIndices;
 		vector<Normal> meshNormals;
 		vector<int> vtxIndices;
 		vector<Vertex> vertices;
+
+		MIntArray meshTris;
+		MIntArray meshTriVerts;
+		newMesh.getTriangles(meshTris, meshTriVerts);
+
+		MItMeshPolygon meshIterator(newMesh.object(), &status);
+		if (status == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Succeeded creating MItMeshPolygod object!");
+		}
+		int triCount = 0;
+		float tempTriVerts[4];
+		for (; !meshIterator.isDone(); meshIterator.next())
+		{
+			
+			MPointArray triPoints;
+			MIntArray vtxTriIdx;
+			meshIterator.numTriangles(triCount);
+			meshIterator.getTriangles(triPoints, vtxTriIdx);
+			
+			triPoints.get(&tempTriVerts);
 		
+			cerr << "Vtx X: " << tempTriVerts[0] << " Y: " << tempTriVerts[1] << " Z: " << tempTriVerts[2] << endl;
+		}
+
 
 		MayaMesh createdMesh;
 		createdMesh.headerType = MsgType::CREATE_MESH;
@@ -126,19 +151,37 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		for (size_t i = 0; i < meshNormalIds.length(); i++)
 		{
 			normalIndices.push_back(meshNormalIds[i]);
+			cerr << "Normal index: " << meshNormalIds[i] << endl;
 		}
 		createdMesh.sizeOfNormalIndex = normalIndices.size();
 		//**** Send mesh to gameplay
-		size_t totalsize = 0;
-		totalsize = sizeof(createdMesh);
-		memcpy(Message, &createdMesh, totalsize);
-		totalsize += (sizeof(int) * vtxIndices.size());
-		memcpy(Message + sizeof(createdMesh), vtxIndices.data(), totalsize);
-		totalsize += (sizeof(Vertex) * vertices.size());
-		memcpy(Message + (sizeof(int) * vtxIndices.size()) + sizeof(createdMesh), vertices.data(), totalsize);
-		
+		//Header data
+		int doubleSize = sizeof(double);
+		size_t cpySize = 0;
+		size_t head = 0;
+		cpySize = sizeof(createdMesh);
+		memcpy(Message, &createdMesh, cpySize);
+		head += cpySize;
 
-		Comlib->send(Message, totalsize);
+		//Vertex data
+		cpySize = (sizeof(int) * vtxIndices.size());
+		memcpy(Message + head, vtxIndices.data(), cpySize);
+		head += cpySize;
+
+		cpySize = (sizeof(Vertex) * vertices.size());
+		memcpy(Message + head, vertices.data(), cpySize);
+		head += cpySize;
+
+		//Normal data
+		cpySize = normalIndices.size() * sizeof(int);
+		memcpy(Message + head, normalIndices.data(), cpySize);
+		head += cpySize;
+
+		cpySize = meshNormals.size() * sizeof(Normal);
+		memcpy(Message + head, meshNormals.data(), cpySize);
+		head += cpySize;
+
+		Comlib->send(Message, head);
 		//*******************************
 		vertices.clear();
 		vtxIndices.clear();
