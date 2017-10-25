@@ -104,11 +104,6 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 
 		//MString name = plug.partialName();
 
-
-
-
-
-
 		double scale[3] = { 0,0,0 };
 		double RotationX, RotationY, RotationZ, RotationW;
 		double TranslationX, TranslationY, TranslationZ;
