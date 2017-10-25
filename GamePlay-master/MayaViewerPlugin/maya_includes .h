@@ -29,7 +29,8 @@
 #include <maya/MSelectionList.h>
 #include <maya/MItDependencyNodes.h>
 #include <maya\MFnAttribute.h>
-
+#include <maya/MUserEventMessage.h>
+#include <maya/MItSelectionList.h>
 // Wrappers
 #include <maya/MGlobal.h>
 #include <maya/MCallbackIdArray.h>

@@ -1,6 +1,7 @@
 #pragma once
 #define BUFFERSIZE (200 * 1024)
 #define MEGABYTE 1024
+#include <vector>
 enum class MsgType
 {
 	CREATE_MESH,
@@ -33,10 +34,22 @@ struct Scaling
 	double ScaleY;
 	double ScaleZ;
 };
-
-struct Vertex
-{
-	int VtxId;
-	double x, y, z;
+struct Vertex {
+	double position[3];
 };
-
+struct Normal
+{
+	double normal[3];
+};
+struct Mesh {
+	int sizeOfVtxIndex;
+	int sizeOfVertices;
+	int sizeOfNormals;
+	int sizeOfNormalIndex;
+	string name;
+	int meshId;
+	vector<int> normalIndices;
+	vector<Normal> normals;
+	vector<int> vtxIndices;
+	vector<Vertex> vertices;
+};

@@ -6,8 +6,9 @@
 using namespace std;
 
 MCallbackIdArray myCallbackArray;
-
+MCallbackId meshCreatedId;
 ComlibMaya* Comlib;
+Mesh createdMesh;
 char *Message;
 
 size_t length;
@@ -15,8 +16,9 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 {
 	MString msg("Elapsed time: ");
 	msg += elapsedTime;
-	//MGlobal::displayInfo(msg);
+//	MGlobal::displayInfo(msg);
 }
+
 
 void findCamera()
 {
@@ -55,10 +57,83 @@ void meshChanged(MObject & node, void* clientData)
 	MGlobal::displayInfo(msg);
 
 }
+void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
+{
+	MStatus status;
+	MFnMesh newMesh(plug.node(), &status);
+	if (status == MS::kSuccess)
+	{
+		//getting vertex index data
+		MIntArray vtxCount;
+		MIntArray vtxList;
+		newMesh.getVertices(vtxCount, vtxList);
+		//cerr << "Vtxlist index length: " << vtxList.length() << endl;
+		int *indexArray = new int[vtxList.length()];
+		vtxList.get(indexArray);
+		for (size_t i = 0; i < vtxList.length(); i++)
+		{
+			//cerr << "VTXIndex: " << indexArray[i] << endl;
+			createdMesh.vtxIndices.push_back(indexArray[i]);
+			
+		}
+		createdMesh.sizeOfVtxIndex = createdMesh.vtxIndices.size();
+
+		//Getting vertex data
+		MFloatPointArray vtxArray;
+		newMesh.getPoints(vtxArray);
+		createdMesh.meshId = 1;
+		createdMesh.name = "TestMesh";
+		//cerr << "Vertex count: " << vtxArray.length() << endl;
+		for (size_t i = 0; i < vtxArray.length(); i++) 
+		{
+			Vertex vtx;
+			vtx.position[0] = (double)vtxArray[i].x;
+			vtx.position[1] = (double)vtxArray[i].y;
+			vtx.position[2] = (double)vtxArray[i].z;
+			createdMesh.vertices.push_back(vtx);
+		}
+		createdMesh.sizeOfVertices = createdMesh.vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
+
+		//Getting normal data
+		MFloatVectorArray normals;
+		newMesh.getNormals(normals);
+		//cerr << "Size of normal arr: " << normals.length() << endl; 
+		for (size_t i = 0; i < normals.length(); i++)
+		{
+			Normal meshNormal;
+			float arr[3];
+			normals[i].get(arr);
+		//	cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
+			meshNormal.normal[0] = (double)arr[0];
+			meshNormal.normal[1] = (double)arr[1];
+			meshNormal.normal[2] = (double)arr[2];
+			createdMesh.normals.push_back(meshNormal);
+		}
+		createdMesh.sizeOfNormals = createdMesh.normals.size();
+
+		//Getting normal indices
+		MIntArray normalCounts;
+		MIntArray meshNormalIds;
+		newMesh.getNormalIds(normalCounts, meshNormalIds);
+		//cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
+		for (size_t i = 0; i < meshNormalIds.length(); i++)
+		{
+			createdMesh.normalIndices.push_back(meshNormalIds[i]);
+		}
+		createdMesh.sizeOfNormalIndex = createdMesh.normalIndices.size();
+		
+		createdMesh.vertices.clear();
+		createdMesh.vtxIndices.clear();
+		createdMesh.normals.clear();
+		createdMesh.normalIndices.clear();
+		MMessage::removeCallback(meshCreatedId);//Removes the callback
+		delete[] indexArray;
+	}
+}
+
 void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 {
 	MStatus status;
-
 	if (child.node().apiType() == MFn::kMesh)
 	{	
 		MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
@@ -72,9 +147,15 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 		{
 			if (myCallbackArray.append(meshChangedID) == MS::kSuccess)
 			{
-				MGlobal::displayInfo("MeshChanged callback added successfully!");
+				//MGlobal::displayInfo("MeshChanged callback added successfully!");
 			}
-		}	
+		}
+		meshCreatedId = MNodeMessage::addAttributeChangedCallback(
+			child.node(),
+			getNewMeshData,
+			NULL,
+			&status
+		);
 	}
 }
 
@@ -103,7 +184,6 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 	{
 
 		//MString name = plug.partialName();
-
 		double scale[3] = { 0,0,0 };
 		double RotationX, RotationY, RotationZ, RotationW;
 		double TranslationX, TranslationY, TranslationZ;
@@ -112,7 +192,6 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		//{
 
 			MString changed;
-
 
 			TranslationX = transNode.getTranslation(MSpace::kWorld).x;
 			TranslationY = transNode.getTranslation(MSpace::kWorld).y;
@@ -124,19 +203,12 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 			changed += TranslationY;
 			changed += " ";
 			changed += TranslationZ;
-			
-
-
-			
-
-			
 
 		//}
 		//if (name == "r" || name == "rx" || name == "ry" || name == "rz")
 		//{
 
 			transNode.getRotationQuaternion(RotationX, RotationY, RotationZ, RotationW, MSpace::kWorld);
-			
 
 			changed += " R: ";
 			changed += RotationX;
@@ -150,7 +222,6 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		//{
 
 			transNode.getScale(scale);
-			
 
 			changed += " S: ";
 			changed += scale[0];
@@ -160,7 +231,6 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 			changed += scale[2];
 			MGlobal::displayInfo(changed);
 		//}
-
 
 			// send TRS data
 
@@ -190,7 +260,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
 
-
 		/////////////////	MATERIAL	///////////////////
 		if (plug.node().hasFn(MFn::kLambert))
 		{
@@ -200,7 +269,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			MGlobal::displayInfo(plug.node().apiTypeStr());
 			MFnLambertShader MyLambert(plug.node());
 
-			
 			MGlobal::displayInfo(MyLambert.absoluteName());
 
 			MColor transp = MyLambert.transparency();
@@ -232,8 +300,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				MGlobal::displayInfo("Texture name: ");
 				MGlobal::displayInfo(texturename);
 			}
-			
-			
 
 			/*print += myColor.r;
 			print += " ";
@@ -314,9 +380,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		/////////////////	MESH	///////////////////
 		else if (plug.node().apiType() == MFn::Type::kMesh)
 		{
-
-			
-
 				MFnAttribute myAttr = plug.attribute();
 				MString attributeName = myAttr.name();
 
@@ -424,8 +487,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					//	}
 					//}
 
-					
-					
 					if (status)
 					{
 						if (plug.logicalIndex() < 100000) // for not printing out some weird index
@@ -487,10 +548,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 						msg += VArr[j];
 						MGlobal::displayInfo(msg);
 					}
-
-
 				}
-			
 		}
 
 		/////////////////	POINTLIGHTS		///////////////////
@@ -498,16 +556,22 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		{
 			MGlobal::displayInfo("Light Attribute Changed!");
 		}
-
-
-
 	}
-
 }
 
 void nodeAdded(MObject &node, void* clientData)
 {
-
+	if (node.hasFn(MFn::kMesh))
+	{
+		MStatus status;
+		MFnMesh mesh(node, &status);
+		if (status == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Hey");
+			MGlobal::displayInfo(mesh.name());
+		}
+	}
+	
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
@@ -546,8 +610,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 		}
 	}
 
-
-
 	MCallbackId addNodeID = MDGMessage::addNodeAddedCallback
 	(
 		nodeAdded,
@@ -563,7 +625,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
-
 
 	MCallbackId AttrChangedID = MNodeMessage::addAttributeChangedCallback
 	(
@@ -581,6 +642,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 			MGlobal::displayInfo("Attribute changed callback added successfully!");
 		}
 	}
+
 	MCallbackId DAGChildAddedID = MDagMessage::addChildAddedCallback(
 		childAdded,
 		NULL,
@@ -595,6 +657,12 @@ EXPORT MStatus initializePlugin(MObject obj)
 	}
 	
 
+	//MStringArray eventNames;
+	//MEventMessage::getEventNames(eventNames);
+	//for (size_t i = 0; i < eventNames.length(); i++)
+	//{
+	//	MGlobal::displayInfo(eventNames[i]);
+	//}
 
 	findCamera();
 	return res;
