@@ -3,6 +3,7 @@
 #include <iostream>
 #include "MayaShared.h"
 #include <sstream>
+#include <assert.h>
 using namespace std;
 
 MCallbackIdArray myCallbackArray;
@@ -46,7 +47,30 @@ void findCamera()
 	}
 
 }
+MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
+{
+    MIntArray localIndex;
+    int gv, gt;
 
+    assert(getTriangle.length() == 3);
+
+    for (gt = 0; gt < getTriangle.length(); gt++)
+    {
+        for (gv = 0; gv  < getVertices.length(); gv ++)
+        {
+            if (getTriangle[gt] == getVertices[gv])
+            {
+                localIndex.append(gv);
+                break;
+            }
+        }
+        if (localIndex.length() == gt)
+        {
+            localIndex.append(-1);
+        }
+    }
+    return localIndex;
+}
 void meshChanged(MObject & node, void* clientData)
 {
 
@@ -82,66 +106,117 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		float tempTriVerts[6][4];
 		for (; !meshIterator.isDone(); meshIterator.next())
 		{
-			
+            
+        
+            MIntArray polyVertexIndex;
+            meshIterator.getVertices(polyVertexIndex);//Polygon vertex indices
+
 			MPointArray triPoints;
 			MIntArray vtxTriIdx;
 			meshIterator.numTriangles(triCount);
-			meshIterator.getTriangles(triPoints, vtxTriIdx);
+			meshIterator.getTriangles(triPoints, vtxTriIdx);//Triangle vertices and vertex indices
+            cerr << "Number of vertices in face: " << triPoints.length() << endl;
 			Vertex vertex;
 			triPoints.get(tempTriVerts);
+          
+            int *faceVertexIndex = new int[vtxTriIdx.length()];
+            vtxTriIdx.get(faceVertexIndex);
+            for (size_t i = 0; i < vtxTriIdx.length(); i++)//loops through each vertex index
+            {
+                cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
+                vtxIndices.push_back(faceVertexIndex[i]);
+            }
+
 			if (triCount == 2)
 			{	
-				for (size_t i = 0; i < triCount * 3; i++)
+                MIntArray localIndex[2];
+
+                MIntArray faceTriangle[2];
+                
+                faceTriangle[0].setLength(3);
+                faceTriangle[1].setLength(3);
+                int indexCount = 0;//Keep track of what index to store inside the faceTriangle array
+                for (size_t i = 0; i < triCount; i++)
+                {
+                    faceTriangle[i][0] = vtxTriIdx[indexCount];
+                    indexCount++;
+                    faceTriangle[i][1] = vtxTriIdx[indexCount];
+                    indexCount++;
+                    faceTriangle[i][2] = vtxTriIdx[indexCount];
+                }
+				for (size_t i = 0; i < triCount; i++)//loops through each triangle in the current face
 				{
-					vertex.position[0] = tempTriVerts[i][0];
-					vertex.position[1] = tempTriVerts[i][1];
-					vertex.position[2] = tempTriVerts[i][2];
-					vertices.push_back(vertex);
+                    localIndex[i] = GetLocalIndex(polyVertexIndex, faceTriangle[i]);
+                    cerr << "Local index length: " << localIndex[i].length() << endl;
+
+                    int *localIndexArray = new int[localIndex[i].length()];
+                    localIndex[i].get(localIndexArray);
+
+                    for (size_t i = 0; i < 3; i++)//loops through every vertex in the triangle
+                    { 
+                        int currentIndex = -1;
+                       currentIndex = meshIterator.normalIndex(localIndexArray[i]);
+                       cerr << "Current normal index " << currentIndex << endl;
+                       normalIndices.push_back(currentIndex);
+                    }
+                    delete[] localIndexArray;
 				}
 			}
 			if (triCount == 1)
 			{
-				for (size_t i = 0; i < triCount * 3; i++)
-				{
-					vertex.position[0] = tempTriVerts[i][0];
-					vertex.position[1] = tempTriVerts[i][1];
-					vertex.position[2] = tempTriVerts[i][2];
-					vertices.push_back(vertex);
-				}
-			}
-		}
+                MIntArray localIndex;
+                MIntArray faceTriangle;
+                faceTriangle.setLength(3);
+                faceTriangle[0] = vtxTriIdx[0];
+                faceTriangle[1] = vtxTriIdx[1];
+                faceTriangle[2] = vtxTriIdx[2];
 
+                localIndex = GetLocalIndex(polyVertexIndex, faceTriangle);
+                int *localIndexArray = new int[localIndex.length()];
+                localIndex.get(localIndexArray);
+
+                for (size_t i = 0; i < 3; i++)//loops through each vertex in the triangle
+                {
+                    int currentIndex = -1;
+                    currentIndex = meshIterator.normalIndex(localIndexArray[i]);
+                    normalIndices.push_back(currentIndex);
+                    cerr << "Current normal index: " << currentIndex << endl;
+                }
+                delete[] localIndexArray;
+			}
+            delete[] faceVertexIndex;
+		}
 
 		MayaMesh createdMesh;
 		createdMesh.headerType = MsgType::CREATE_MESH;
 		//getting vertex index data
-		MIntArray vtxCount;
-		MIntArray vtxList;
-		newMesh.getVertices(vtxCount, vtxList);
-		//cerr << "Vtxlist index length: " << vtxList.length() << endl;
-		int *indexArray = new int[vtxList.length()];
-		vtxList.get(indexArray);
-		for (size_t i = 0; i < vtxList.length(); i++)
-		{
-			cerr << "VTXIndex: " << indexArray[i] << endl;
-			vtxIndices.push_back(indexArray[i]);
-		}
+		//MIntArray vtxCount;
+		//MIntArray vtxList;
+		//newMesh.getVertices(vtxCount, vtxList);
+		////cerr << "Vtxlist index length: " << vtxList.length() << endl;
+		//int *indexArray = new int[vtxList.length()];
+		//vtxList.get(indexArray);
+		//for (size_t i = 0; i < vtxList.length(); i++)
+		//{
+		//	//cerr << "VTXIndex: " << indexArray[i] << endl;
+		//	//vtxIndices.push_back(indexArray[i]);
+		//}
 		createdMesh.sizeOfVtxIndex = vtxIndices.size();
 
 		//Getting vertex data
-		//MFloatPointArray vtxArray;
-		//newMesh.getPoints(vtxArray);
-		//createdMesh.name = "TestMesh";
-		////cerr << "Vertex count: " << vtxArray.length() << endl;
-		//for (size_t i = 0; i < vtxArray.length(); i++) 
-		//{
-		//	Vertex vtx;
-		//	vtx.position[0] = (double)vtxArray[i].x;
-		//	vtx.position[1] = (double)vtxArray[i].y;
-		//	vtx.position[2] = (double)vtxArray[i].z;
-		//	vertices.push_back(vtx);
-		//	cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
-		//}
+		MFloatPointArray vtxArray;
+		newMesh.getPoints(vtxArray);
+		createdMesh.name = "TestMesh";
+		//cerr << "Vertex count: " << vtxArray.length() << endl;
+		for (size_t i = 0; i < vtxArray.length(); i++) 
+		{
+			Vertex vtx;
+			vtx.position[0] = (double)vtxArray[i].x;
+			vtx.position[1] = (double)vtxArray[i].y;
+			vtx.position[2] = (double)vtxArray[i].z;
+			vertices.push_back(vtx);
+			cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
+		}
 		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
 		//Getting normal data
@@ -200,13 +275,15 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		head += cpySize;
 
 		Comlib->send(Message, head);
+
 		//*******************************
 		vertices.clear();
 		vtxIndices.clear();
 		meshNormals.clear();
 		normalIndices.clear();
 		MMessage::removeCallback(meshCreatedId);//Removes the callback
-		delete[] indexArray;
+	/*	delete[] indexArray;*/
+
 	}
 }
 
