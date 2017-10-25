@@ -237,15 +237,15 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		createdMesh.sizeOfNormals = meshNormals.size();
 
 		//Getting normal indices
-		MIntArray normalCounts;
-		MIntArray meshNormalIds;
-		newMesh.getNormalIds(normalCounts, meshNormalIds);
-		//cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
-		for (size_t i = 0; i < meshNormalIds.length(); i++)
-		{
-			normalIndices.push_back(meshNormalIds[i]);
-			cerr << "Normal index: " << meshNormalIds[i] << endl;
-		}
+		//MIntArray normalCounts;
+		//MIntArray meshNormalIds;
+		//newMesh.getNormalIds(normalCounts, meshNormalIds);
+		////cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
+		//for (size_t i = 0; i < meshNormalIds.length(); i++)
+		//{
+		//	normalIndices.push_back(meshNormalIds[i]);
+		//	cerr << "Normal index: " << meshNormalIds[i] << endl;
+		//}
 		createdMesh.sizeOfNormalIndex = normalIndices.size();
 		//**** Send mesh to gameplay
 		//Header data

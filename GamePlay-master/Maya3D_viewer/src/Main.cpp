@@ -6,8 +6,30 @@
 Main game;
 Comlib* Receiver;
 
-void CreateMesh(char* &msg)
+Main::Main()
+    : _scene(NULL), _wireframe(false)
 {
+}
+
+void Main::initialize()
+{
+    // Load game scene from file
+    _scene = Scene::load("res/demo.scene");
+
+    // Get the box model and initialize its material parameter values and bindings
+    Node* boxNode = _scene->findNode("box");
+    Model* boxModel = dynamic_cast<Model*>(boxNode->getDrawable());
+    Material* boxMaterial = boxModel->getMaterial();
+
+    // Set the aspect ratio for the scene's camera to match the current resolution
+    _scene->getActiveCamera()->setAspectRatio(getAspectRatio());
+
+    Receiver = new Comlib(BUFFERSIZE);
+}
+
+void CreateMesh(char* &msg, Scene &scene)
+{
+    
 	vector<Vertex> vtxVector;
 	vector<Normal> NrmVector;
 	size_t head = 0;
@@ -15,19 +37,26 @@ void CreateMesh(char* &msg)
 	memcpy(meshRecieved, msg, sizeof(MayaMesh));
 	head += sizeof(MayaMesh);
 
+
+    ///////////////     VERTEX INDEX    \\\\\\\\\\\\\\\\\\
+
 	int* vtxIndexArr = new int[meshRecieved->sizeOfVtxIndex];
 	memcpy(vtxIndexArr, msg + head, sizeof(int) * meshRecieved->sizeOfVtxIndex);
 	head += sizeof(int)*meshRecieved->sizeOfVtxIndex;
 
-	
+    ///////////////     VERTEX INFORMAION    \\\\\\\\\\\\\\\\\\
+
 	Vertex vertex;
 	for (size_t i = 0; i < meshRecieved->sizeOfVertices; i++)
 	{
-		memcpy(&vertex, msg + head * meshRecieved->sizeOfVtxIndex + (sizeof(Vertex) * i), sizeof(Vertex));
+		memcpy(&vertex, msg + head + (sizeof(Vertex) * i), sizeof(Vertex));
 		
 		vtxVector.push_back(vertex);
 	}
 	head += sizeof(Vertex) * meshRecieved->sizeOfVertices;
+
+
+    ///////////////     NORMAL INDEX    \\\\\\\\\\\\\\\\\\
 
 	int* NrmIndexArr = new int[meshRecieved->sizeOfNormalIndex];
 	memcpy(NrmIndexArr, msg + head, sizeof(int)*meshRecieved->sizeOfNormalIndex);
@@ -37,6 +66,8 @@ void CreateMesh(char* &msg)
 		NrmIndexArr[i];
 	}
 	head += sizeof(int)*meshRecieved->sizeOfNormalIndex;
+
+    ///////////////     NORMALS   \\\\\\\\\\\\\\\\\\
 
 	Normal norm;
 	for (size_t i = 0; i < meshRecieved->sizeOfNormals; i++)
@@ -49,15 +80,20 @@ void CreateMesh(char* &msg)
 	int arrayIt = (sizeof(double) * 6) * meshRecieved->sizeOfVertices;
 	double* meshVertexData = new double[arrayIt];
 
+    ///////////////     CREATE MESH   \\\\\\\\\\\\\\\\\\
+
 	size_t index = 0;
 	for (size_t i = 0; i < meshRecieved->sizeOfVtxIndex; i++)
 	{
+        // Vertices
 		meshVertexData[index] = vtxVector[vtxIndexArr[i]].position[0];
 		index++;
 		meshVertexData[index] = vtxVector[vtxIndexArr[i]].position[1];
 		index++;		
 		meshVertexData[index] = vtxVector[vtxIndexArr[i]].position[2];
 		index++;
+
+        // Normals
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[0];
 		index++;
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[1];
@@ -78,19 +114,27 @@ void CreateMesh(char* &msg)
 	}
 
 	newMesh->setVertexData(meshVertexData, 0, meshRecieved->sizeOfVtxIndex);
-	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX16, meshRecieved->sizeOfNormalIndex);
+	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX16, meshRecieved->sizeOfVtxIndex);
+    meshPart->setIndexData(&NrmIndexArr, 0, meshRecieved->sizeOfNormalIndex);
+
+    Model* models[1];
+
+    models[0] = Model::create(newMesh);
+  
 	//Create the FACKING MESH
 	//double* vertexArray = new double[meshRecieved->sizeOfVertices * 3];
 	//for (size_t i = 0; i < meshRecieved->sizeOfVertices * 3; i++)
 	//{
 	//	vertexArray[0] = 
 	//}
-
+    char nodeName[20] = {};
+    sprintf(nodeName, "cube1");
+    
 
 	
 
 }
-void unPack()
+void unPack(Scene &scene)
 {
 	char* Package = nullptr;
 	size_t* length;
@@ -110,7 +154,7 @@ void unPack()
 
 	case 0:	
 		//	CREATE_MESH
-		CreateMesh(Package);		
+		CreateMesh(Package, scene);		
 		break;
 	case 1:
 		//	Another Type
@@ -121,26 +165,7 @@ void unPack()
 	
 }
 
-Main::Main()
-    : _scene(NULL), _wireframe(false)
-{
-}
 
-void Main::initialize()
-{
-    // Load game scene from file
-    _scene = Scene::load("res/demo.scene");
-
-    // Get the box model and initialize its material parameter values and bindings
-    Node* boxNode = _scene->findNode("box");
-    Model* boxModel = dynamic_cast<Model*>(boxNode->getDrawable());
-    Material* boxMaterial = boxModel->getMaterial();
-
-    // Set the aspect ratio for the scene's camera to match the current resolution
-    _scene->getActiveCamera()->setAspectRatio(getAspectRatio());
-
-	Receiver = new Comlib(BUFFERSIZE);
-}
 
 void Main::finalize()
 {
@@ -152,7 +177,7 @@ void Main::update(float elapsedTime)
 
 	
 
-	unPack();
+	unPack(_scene);
     // Rotate model
     _scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
 }
