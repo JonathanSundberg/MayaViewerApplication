@@ -79,7 +79,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			MGlobal::displayInfo("Succeeded creating MItMeshPolygod object!");
 		}
 		int triCount = 0;
-		float tempTriVerts[4];
+		float tempTriVerts[6][4];
 		for (; !meshIterator.isDone(); meshIterator.next())
 		{
 			
@@ -87,10 +87,28 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			MIntArray vtxTriIdx;
 			meshIterator.numTriangles(triCount);
 			meshIterator.getTriangles(triPoints, vtxTriIdx);
-			
-			triPoints.get(&tempTriVerts);
-		
-			cerr << "Vtx X: " << tempTriVerts[0] << " Y: " << tempTriVerts[1] << " Z: " << tempTriVerts[2] << endl;
+			Vertex vertex;
+			triPoints.get(tempTriVerts);
+			if (triCount == 2)
+			{	
+				for (size_t i = 0; i < triCount * 3; i++)
+				{
+					vertex.position[0] = tempTriVerts[i][0];
+					vertex.position[1] = tempTriVerts[i][1];
+					vertex.position[2] = tempTriVerts[i][2];
+					vertices.push_back(vertex);
+				}
+			}
+			if (triCount == 1)
+			{
+				for (size_t i = 0; i < triCount * 3; i++)
+				{
+					vertex.position[0] = tempTriVerts[i][0];
+					vertex.position[1] = tempTriVerts[i][1];
+					vertex.position[2] = tempTriVerts[i][2];
+					vertices.push_back(vertex);
+				}
+			}
 		}
 
 
@@ -111,19 +129,19 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		createdMesh.sizeOfVtxIndex = vtxIndices.size();
 
 		//Getting vertex data
-		MFloatPointArray vtxArray;
-		newMesh.getPoints(vtxArray);
-		createdMesh.name = "TestMesh";
-		//cerr << "Vertex count: " << vtxArray.length() << endl;
-		for (size_t i = 0; i < vtxArray.length(); i++) 
-		{
-			Vertex vtx;
-			vtx.position[0] = (double)vtxArray[i].x;
-			vtx.position[1] = (double)vtxArray[i].y;
-			vtx.position[2] = (double)vtxArray[i].z;
-			vertices.push_back(vtx);
-			cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
-		}
+		//MFloatPointArray vtxArray;
+		//newMesh.getPoints(vtxArray);
+		//createdMesh.name = "TestMesh";
+		////cerr << "Vertex count: " << vtxArray.length() << endl;
+		//for (size_t i = 0; i < vtxArray.length(); i++) 
+		//{
+		//	Vertex vtx;
+		//	vtx.position[0] = (double)vtxArray[i].x;
+		//	vtx.position[1] = (double)vtxArray[i].y;
+		//	vtx.position[2] = (double)vtxArray[i].z;
+		//	vertices.push_back(vtx);
+		//	cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
+		//}
 		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
 		//Getting normal data
