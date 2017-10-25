@@ -8,7 +8,7 @@ using namespace std;
 MCallbackIdArray myCallbackArray;
 MCallbackId meshCreatedId;
 ComlibMaya* Comlib;
-Mesh createdMesh;
+
 char *Message;
 
 size_t length;
@@ -61,8 +61,41 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 {
 	MStatus status;
 	MFnMesh newMesh(plug.node(), &status);
+
 	if (status == MS::kSuccess)
 	{
+		vector<int> normalIndices;
+		vector<Normal> meshNormals;
+		vector<int> vtxIndices;
+		vector<Vertex> vertices;
+
+		MIntArray meshTris;
+		MIntArray meshTriVerts;
+		newMesh.getTriangles(meshTris, meshTriVerts);
+
+		MItMeshPolygon meshIterator(newMesh.object(), &status);
+		if (status == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Succeeded creating MItMeshPolygod object!");
+		}
+		int triCount = 0;
+		float tempTriVerts[4];
+		for (; !meshIterator.isDone(); meshIterator.next())
+		{
+			
+			MPointArray triPoints;
+			MIntArray vtxTriIdx;
+			meshIterator.numTriangles(triCount);
+			meshIterator.getTriangles(triPoints, vtxTriIdx);
+			
+			triPoints.get(&tempTriVerts);
+		
+			cerr << "Vtx X: " << tempTriVerts[0] << " Y: " << tempTriVerts[1] << " Z: " << tempTriVerts[2] << endl;
+		}
+
+
+		MayaMesh createdMesh;
+		createdMesh.headerType = MsgType::CREATE_MESH;
 		//getting vertex index data
 		MIntArray vtxCount;
 		MIntArray vtxList;
@@ -72,16 +105,14 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		vtxList.get(indexArray);
 		for (size_t i = 0; i < vtxList.length(); i++)
 		{
-			//cerr << "VTXIndex: " << indexArray[i] << endl;
-			createdMesh.vtxIndices.push_back(indexArray[i]);
-			
+			cerr << "VTXIndex: " << indexArray[i] << endl;
+			vtxIndices.push_back(indexArray[i]);
 		}
-		createdMesh.sizeOfVtxIndex = createdMesh.vtxIndices.size();
+		createdMesh.sizeOfVtxIndex = vtxIndices.size();
 
 		//Getting vertex data
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray);
-		createdMesh.meshId = 1;
 		createdMesh.name = "TestMesh";
 		//cerr << "Vertex count: " << vtxArray.length() << endl;
 		for (size_t i = 0; i < vtxArray.length(); i++) 
@@ -90,9 +121,10 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			vtx.position[0] = (double)vtxArray[i].x;
 			vtx.position[1] = (double)vtxArray[i].y;
 			vtx.position[2] = (double)vtxArray[i].z;
-			createdMesh.vertices.push_back(vtx);
+			vertices.push_back(vtx);
+			cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
 		}
-		createdMesh.sizeOfVertices = createdMesh.vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
+		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
 		//Getting normal data
 		MFloatVectorArray normals;
@@ -103,13 +135,13 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			Normal meshNormal;
 			float arr[3];
 			normals[i].get(arr);
-		//	cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
+			cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
 			meshNormal.normal[0] = (double)arr[0];
 			meshNormal.normal[1] = (double)arr[1];
 			meshNormal.normal[2] = (double)arr[2];
-			createdMesh.normals.push_back(meshNormal);
+			meshNormals.push_back(meshNormal);
 		}
-		createdMesh.sizeOfNormals = createdMesh.normals.size();
+		createdMesh.sizeOfNormals = meshNormals.size();
 
 		//Getting normal indices
 		MIntArray normalCounts;
@@ -118,14 +150,43 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		//cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
 		for (size_t i = 0; i < meshNormalIds.length(); i++)
 		{
-			createdMesh.normalIndices.push_back(meshNormalIds[i]);
+			normalIndices.push_back(meshNormalIds[i]);
+			cerr << "Normal index: " << meshNormalIds[i] << endl;
 		}
-		createdMesh.sizeOfNormalIndex = createdMesh.normalIndices.size();
-		
-		createdMesh.vertices.clear();
-		createdMesh.vtxIndices.clear();
-		createdMesh.normals.clear();
-		createdMesh.normalIndices.clear();
+		createdMesh.sizeOfNormalIndex = normalIndices.size();
+		//**** Send mesh to gameplay
+		//Header data
+		int doubleSize = sizeof(double);
+		size_t cpySize = 0;
+		size_t head = 0;
+		cpySize = sizeof(createdMesh);
+		memcpy(Message, &createdMesh, cpySize);
+		head += cpySize;
+
+		//Vertex data
+		cpySize = (sizeof(int) * vtxIndices.size());
+		memcpy(Message + head, vtxIndices.data(), cpySize);
+		head += cpySize;
+
+		cpySize = (sizeof(Vertex) * vertices.size());
+		memcpy(Message + head, vertices.data(), cpySize);
+		head += cpySize;
+
+		//Normal data
+		cpySize = normalIndices.size() * sizeof(int);
+		memcpy(Message + head, normalIndices.data(), cpySize);
+		head += cpySize;
+
+		cpySize = meshNormals.size() * sizeof(Normal);
+		memcpy(Message + head, meshNormals.data(), cpySize);
+		head += cpySize;
+
+		Comlib->send(Message, head);
+		//*******************************
+		vertices.clear();
+		vtxIndices.clear();
+		meshNormals.clear();
+		normalIndices.clear();
 		MMessage::removeCallback(meshCreatedId);//Removes the callback
 		delete[] indexArray;
 	}

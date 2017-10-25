@@ -41,15 +41,11 @@ struct Normal
 {
 	double normal[3];
 };
-struct Mesh {
+struct MayaMesh {
+	MsgType headerType;
 	int sizeOfVtxIndex;
 	int sizeOfVertices;
-	int sizeOfNormals;
 	int sizeOfNormalIndex;
+	int sizeOfNormals;
 	string name;
-	int meshId;
-	vector<int> normalIndices;
-	vector<Normal> normals;
-	vector<int> vtxIndices;
-	vector<Vertex> vertices;
 };
