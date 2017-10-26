@@ -118,14 +118,17 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
             cerr << "Number of vertices in face: " << triPoints.length() << endl;
 			Vertex vertex;
 			triPoints.get(tempTriVerts);
-          
-            int *faceVertexIndex = new int[vtxTriIdx.length()];
-            vtxTriIdx.get(faceVertexIndex);
-            for (size_t i = 0; i < vtxTriIdx.length(); i++)//loops through each vertex index
-            {
-                cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
-                vtxIndices.push_back(faceVertexIndex[i]);
-            }
+			if (vtxTriIdx.length() > 0)
+			{
+				int *faceVertexIndex = new int[vtxTriIdx.length()];
+				vtxTriIdx.get(faceVertexIndex);
+				for (size_t i = 0; i < vtxTriIdx.length(); i++)//loops through each vertex index
+				{
+					cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
+					vtxIndices.push_back(faceVertexIndex[i]);
+				}
+				delete[] faceVertexIndex;
+			}
 
 			if (triCount == 2)
 			{	
@@ -184,7 +187,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                 }
                 delete[] localIndexArray;
 			}
-            delete[] faceVertexIndex;
+           
 		}
 
 		MayaMesh createdMesh;
@@ -206,7 +209,9 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		//Getting vertex data
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray);
-		createdMesh.name = "TestMesh";
+		string meshName = newMesh.name().asChar();
+		strncpy(createdMesh.name, meshName.c_str(), sizeof(createdMesh.name));
+		createdMesh.name[sizeof(createdMesh.name) - 1] = 0;
 		//cerr << "Vertex count: " << vtxArray.length() << endl;
 		for (size_t i = 0; i < vtxArray.length(); i++) 
 		{
@@ -235,17 +240,6 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			meshNormals.push_back(meshNormal);
 		}
 		createdMesh.sizeOfNormals = meshNormals.size();
-
-		//Getting normal indices
-		//MIntArray normalCounts;
-		//MIntArray meshNormalIds;
-		//newMesh.getNormalIds(normalCounts, meshNormalIds);
-		////cerr << "Normal indices amount: " << meshNormalIds.length() << endl;
-		//for (size_t i = 0; i < meshNormalIds.length(); i++)
-		//{
-		//	normalIndices.push_back(meshNormalIds[i]);
-		//	cerr << "Normal index: " << meshNormalIds[i] << endl;
-		//}
 		createdMesh.sizeOfNormalIndex = normalIndices.size();
 		//**** Send mesh to gameplay
 		//Header data

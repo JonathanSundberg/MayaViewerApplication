@@ -47,5 +47,5 @@ struct MayaMesh {
 	int sizeOfVertices;
 	int sizeOfNormalIndex;
 	int sizeOfNormals;
-	string name;
+	char name[75];
 };

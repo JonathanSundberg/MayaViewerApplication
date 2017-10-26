@@ -23,6 +23,7 @@ void Main::initialize()
 
     // Set the aspect ratio for the scene's camera to match the current resolution
     _scene->getActiveCamera()->setAspectRatio(getAspectRatio());
+	
 
     Receiver = new Comlib(BUFFERSIZE);
 }
@@ -92,15 +93,15 @@ void Main::CreateMesh(char* &msg)
 	size_t index = 0;
 	for (size_t i = 0; i < meshRecieved->sizeOfVtxIndex; i++)
 	{
-        // Vertices
+		// Vertices
 		meshVertexData[index] = vtxVector[vtxIndexArr[i]].position[0];
 		index++;
 		meshVertexData[index] = vtxVector[vtxIndexArr[i]].position[1];
-		index++;		
+		index++;
 		meshVertexData[index] = vtxVector[vtxIndexArr[i]].position[2];
 		index++;
 
-        // Normals
+		// Normals
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[0];
 		index++;
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[1];
@@ -108,16 +109,18 @@ void Main::CreateMesh(char* &msg)
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[2];
 		index++;
 	}
-	float z = 0;
-	for (size_t i = 0; i < 36*6; i++)
+
+	int *indices = new int[meshRecieved->sizeOfVtxIndex];
+	for (size_t i = 0; i < meshRecieved->sizeOfVtxIndex; i++)
 	{
-		z = meshVertexData[i];
+		indices[i] = i;
 	}
 
 	VertexFormat::Element elements[] = {
 		VertexFormat::Element(VertexFormat::POSITION, 3),
 		VertexFormat::Element(VertexFormat::NORMAL, 3),
 	};
+
 	Mesh* newMesh = Mesh::createMesh(VertexFormat(elements, 2), meshRecieved->sizeOfVtxIndex, false);
 	if (newMesh == NULL)
 	{
@@ -127,7 +130,7 @@ void Main::CreateMesh(char* &msg)
 
 	newMesh->setVertexData(meshVertexData, 0, meshRecieved->sizeOfVtxIndex);
 	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX32, meshRecieved->sizeOfVtxIndex);
-    meshPart->setIndexData(&NrmIndexArr, 0, meshRecieved->sizeOfNormalIndex);
+    meshPart->setIndexData(indices, 0, meshRecieved->sizeOfVtxIndex);
 
     Model* models[10];
 	Material *mats[10];
@@ -155,9 +158,6 @@ void Main::CreateMesh(char* &msg)
 	Node *node = _scene->addNode(nodeName);
 	node->setDrawable(models[0]);
 	SAFE_RELEASE(models[0])
-
-	
-
 }
 void Main::unPack()
 {
