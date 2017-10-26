@@ -56,6 +56,9 @@ private:
      * Draws the scene each frame.
      */
     bool drawScene(Node* node);
+	
+	void CreateMesh(char* &msg);
+	void unPack();
 
     Scene* _scene;
     bool _wireframe;

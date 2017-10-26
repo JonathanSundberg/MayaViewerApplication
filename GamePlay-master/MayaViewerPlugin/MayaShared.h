@@ -35,11 +35,11 @@ struct Scaling
 	double ScaleZ;
 };
 struct Vertex {
-	double position[3];
+	float position[3];
 };
 struct Normal
 {
-	double normal[3];
+	float normal[3];
 };
 struct MayaMesh {
 	MsgType headerType;

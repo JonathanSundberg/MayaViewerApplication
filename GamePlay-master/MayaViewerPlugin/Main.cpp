@@ -211,9 +211,9 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		for (size_t i = 0; i < vtxArray.length(); i++) 
 		{
 			Vertex vtx;
-			vtx.position[0] = (double)vtxArray[i].x;
-			vtx.position[1] = (double)vtxArray[i].y;
-			vtx.position[2] = (double)vtxArray[i].z;
+			vtx.position[0] = vtxArray[i].x;
+			vtx.position[1] = vtxArray[i].y;
+			vtx.position[2] = vtxArray[i].z;
 			vertices.push_back(vtx);
 			cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
 		}
@@ -229,9 +229,9 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			float arr[3];
 			normals[i].get(arr);
 			cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
-			meshNormal.normal[0] = (double)arr[0];
-			meshNormal.normal[1] = (double)arr[1];
-			meshNormal.normal[2] = (double)arr[2];
+			meshNormal.normal[0] = arr[0];
+			meshNormal.normal[1] = arr[1];
+			meshNormal.normal[2] = arr[2];
 			meshNormals.push_back(meshNormal);
 		}
 		createdMesh.sizeOfNormals = meshNormals.size();
@@ -249,7 +249,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		createdMesh.sizeOfNormalIndex = normalIndices.size();
 		//**** Send mesh to gameplay
 		//Header data
-		int doubleSize = sizeof(double);
+		int floatSize = sizeof(float);
 		size_t cpySize = 0;
 		size_t head = 0;
 		cpySize = sizeof(createdMesh);

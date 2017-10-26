@@ -27,7 +27,7 @@ void Main::initialize()
     Receiver = new Comlib(BUFFERSIZE);
 }
 
-void CreateMesh(char* &msg, Scene &scene)
+void Main::CreateMesh(char* &msg)
 {
     
 	vector<Vertex> vtxVector;
@@ -43,6 +43,12 @@ void CreateMesh(char* &msg, Scene &scene)
 	int* vtxIndexArr = new int[meshRecieved->sizeOfVtxIndex];
 	memcpy(vtxIndexArr, msg + head, sizeof(int) * meshRecieved->sizeOfVtxIndex);
 	head += sizeof(int)*meshRecieved->sizeOfVtxIndex;
+	int a = -1;
+	for (size_t i = 0; i < 36; i++)
+	{
+		a = vtxIndexArr[i];
+
+	}
 
     ///////////////     VERTEX INFORMAION    \\\\\\\\\\\\\\\\\\
 
@@ -63,7 +69,7 @@ void CreateMesh(char* &msg, Scene &scene)
 
 	for (size_t i = 0; i < meshRecieved->sizeOfNormalIndex; i++)
 	{
-		NrmIndexArr[i];
+		int b = NrmIndexArr[i];
 	}
 	head += sizeof(int)*meshRecieved->sizeOfNormalIndex;
 
@@ -77,8 +83,9 @@ void CreateMesh(char* &msg, Scene &scene)
 	}
 
 	head += sizeof(Normal)*meshRecieved->sizeOfNormals;
-	int arrayIt = (sizeof(double) * 6) * meshRecieved->sizeOfVertices;
-	double* meshVertexData = new double[arrayIt];
+	int arrayIt = meshRecieved->sizeOfVtxIndex * 6;
+	float* meshVertexData = new float[meshRecieved->sizeOfVtxIndex * 6];
+
 
     ///////////////     CREATE MESH   \\\\\\\\\\\\\\\\\\
 
@@ -101,6 +108,11 @@ void CreateMesh(char* &msg, Scene &scene)
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[2];
 		index++;
 	}
+	float z = 0;
+	for (size_t i = 0; i < 36*6; i++)
+	{
+		z = meshVertexData[i];
+	}
 
 	VertexFormat::Element elements[] = {
 		VertexFormat::Element(VertexFormat::POSITION, 3),
@@ -114,27 +126,40 @@ void CreateMesh(char* &msg, Scene &scene)
 	}
 
 	newMesh->setVertexData(meshVertexData, 0, meshRecieved->sizeOfVtxIndex);
-	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX16, meshRecieved->sizeOfVtxIndex);
+	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX32, meshRecieved->sizeOfVtxIndex);
     meshPart->setIndexData(&NrmIndexArr, 0, meshRecieved->sizeOfNormalIndex);
 
-    Model* models[1];
+    Model* models[10];
+	Material *mats[10];
+
+	Node* lightNode = _scene->addNode("light");
+	Light* light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
+	lightNode->setLight(light);
+	SAFE_RELEASE(light);
+	lightNode->translate(Vector3(0, 1, 5));
 
     models[0] = Model::create(newMesh);
-  
-	//Create the FACKING MESH
-	//double* vertexArray = new double[meshRecieved->sizeOfVertices * 3];
-	//for (size_t i = 0; i < meshRecieved->sizeOfVertices * 3; i++)
-	//{
-	//	vertexArray[0] = 
-	//}
+	mats[0] = models[0]->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	mats[0] = models[0]->setMaterial("res/demo.material#lambert2");
+	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+
+	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.1f, 0.4f));
+	mats[0]->getStateBlock()->setCullFace(true);
+	mats[0]->getStateBlock()->setDepthTest(true);
+	mats[0]->getStateBlock()->setDepthWrite(true);
+	
     char nodeName[20] = {};
     sprintf(nodeName, "cube1");
     
+	Node *node = _scene->addNode(nodeName);
+	node->setDrawable(models[0]);
+	SAFE_RELEASE(models[0])
 
 	
 
 }
-void unPack(Scene &scene)
+void Main::unPack()
 {
 	char* Package = nullptr;
 	size_t* length;
@@ -154,7 +179,7 @@ void unPack(Scene &scene)
 
 	case 0:	
 		//	CREATE_MESH
-		CreateMesh(Package, scene);		
+		CreateMesh(Package);		
 		break;
 	case 1:
 		//	Another Type
@@ -177,9 +202,12 @@ void Main::update(float elapsedTime)
 
 	
 
-	unPack(_scene);
+	unPack();
     // Rotate model
     _scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
+
+
+
 }
 
 void Main::render(float elapsedTime)
