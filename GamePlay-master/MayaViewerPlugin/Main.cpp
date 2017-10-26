@@ -103,7 +103,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			MGlobal::displayInfo("Succeeded creating MItMeshPolygod object!");
 		}
 		int triCount = 0;
-		float tempTriVerts[6][4];
+
 		for (; !meshIterator.isDone(); meshIterator.next())
 		{
             
@@ -115,29 +115,34 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			MIntArray vtxTriIdx;
 			meshIterator.numTriangles(triCount);
 			meshIterator.getTriangles(triPoints, vtxTriIdx);//Triangle vertices and vertex indices
+			int triLength = vtxTriIdx.length();
             cerr << "Number of vertices in face: " << triPoints.length() << endl;
 			Vertex vertex;
-			triPoints.get(tempTriVerts);
+		
 			if (vtxTriIdx.length() > 0)
 			{
-				int *faceVertexIndex = new int[vtxTriIdx.length()];
+				int faceVertexIndex[1000];// = new int[vtxTriIdx.length()];
 				vtxTriIdx.get(faceVertexIndex);
 				for (size_t i = 0; i < vtxTriIdx.length(); i++)//loops through each vertex index
 				{
 					cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
 					vtxIndices.push_back(faceVertexIndex[i]);
 				}
-				delete[] faceVertexIndex;
+				//delete[] faceVertexIndex;
 			}
 
-			if (triCount == 2)
+			if (triCount > 1)
 			{	
-                MIntArray localIndex[2];
+                MIntArray *localIndex = new MIntArray[triCount];
 
-                MIntArray faceTriangle[2];
+                MIntArray *faceTriangle = new MIntArray[triCount];
                 
-                faceTriangle[0].setLength(3);
-                faceTriangle[1].setLength(3);
+				for (size_t i = 0; i < triCount; i++)
+				{
+					faceTriangle[i].setLength(3);
+					
+				}
+
                 int indexCount = 0;//Keep track of what index to store inside the faceTriangle array
                 for (size_t i = 0; i < triCount; i++)
                 {
@@ -152,7 +157,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                     localIndex[i] = GetLocalIndex(polyVertexIndex, faceTriangle[i]);
                     cerr << "Local index length: " << localIndex[i].length() << endl;
 
-                    int *localIndexArray = new int[localIndex[i].length()];
+					int localIndexArray[1000];// = new int[localIndex[i].length()];
                     localIndex[i].get(localIndexArray);
 
                     for (size_t i = 0; i < 3; i++)//loops through every vertex in the triangle
@@ -162,8 +167,9 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                        cerr << "Current normal index " << currentIndex << endl;
                        normalIndices.push_back(currentIndex);
                     }
-                    delete[] localIndexArray;
 				}
+				delete[] localIndex;
+				delete[] faceTriangle;
 			}
 			if (triCount == 1)
 			{
@@ -175,7 +181,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                 faceTriangle[2] = vtxTriIdx[2];
 
                 localIndex = GetLocalIndex(polyVertexIndex, faceTriangle);
-                int *localIndexArray = new int[localIndex.length()];
+				int localIndexArray[100]; //new int[localIndex.length()];
                 localIndex.get(localIndexArray);
 
                 for (size_t i = 0; i < 3; i++)//loops through each vertex in the triangle
@@ -185,25 +191,14 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                     normalIndices.push_back(currentIndex);
                     cerr << "Current normal index: " << currentIndex << endl;
                 }
-                delete[] localIndexArray;
+              //  delete[] localIndexArray;
 			}
            
 		}
 
 		MayaMesh createdMesh;
 		createdMesh.headerType = MsgType::CREATE_MESH;
-		//getting vertex index data
-		//MIntArray vtxCount;
-		//MIntArray vtxList;
-		//newMesh.getVertices(vtxCount, vtxList);
-		////cerr << "Vtxlist index length: " << vtxList.length() << endl;
-		//int *indexArray = new int[vtxList.length()];
-		//vtxList.get(indexArray);
-		//for (size_t i = 0; i < vtxList.length(); i++)
-		//{
-		//	//cerr << "VTXIndex: " << indexArray[i] << endl;
-		//	//vtxIndices.push_back(indexArray[i]);
-		//}
+		
 		createdMesh.sizeOfVtxIndex = vtxIndices.size();
 
 		//Getting vertex data
@@ -740,7 +735,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 
 	Comlib = new ComlibMaya(BUFFERSIZE);
-	Message = new char[MEGABYTE];
+	Message = new char[MEGABYTE * 5];
 	
 
 	MStatus status = MS::kSuccess;
