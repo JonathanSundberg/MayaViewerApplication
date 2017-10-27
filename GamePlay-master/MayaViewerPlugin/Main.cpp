@@ -17,9 +17,49 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 {
 	MString msg("Elapsed time: ");
 	msg += elapsedTime;
-//	MGlobal::displayInfo(msg);
+	//	MGlobal::displayInfo(msg);
 }
 
+void CameraViewCallback(const MString &str, void* clientData)
+{
+	M3dView view;
+	MGlobal::displayInfo("ViewCallBack");
+
+	MStatus status = MS::kSuccess;
+
+	status = M3dView::getM3dViewFromModelPanel(str, view);
+	if (status == MS::kSuccess)
+	{
+		MMatrix viewMatrix;
+		MMatrix cameraPos;
+		MDagPath camera;
+		MString msg;
+		view.modelViewMatrix(viewMatrix);
+
+
+
+		view.getCamera(camera);
+		cameraPos = camera.inclusiveMatrix();
+		
+
+		for (size_t i = 0; i < 4; i++)
+		{
+
+			// i on 4 is translation (position) of the camera
+			for (size_t j = 0; j < 4; j++)
+			{
+
+				msg += cameraPos.matrix[i][j];
+				msg += " ";
+			}
+			msg += "\n";
+		}
+
+		MGlobal::displayInfo(msg);
+	}
+
+
+}
 
 void findCamera()
 {
@@ -39,9 +79,9 @@ void findCamera()
 
 				MGlobal::displayInfo(msg);
 
-				
+
 			}
-			
+
 
 		}
 	}
@@ -219,7 +259,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		}
 		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
-		//Getting normal data
+													  //Getting normal data
 		MFloatVectorArray normals;
 		newMesh.getNormals(normals);
 		//cerr << "Size of normal arr: " << normals.length() << endl; 
@@ -280,7 +320,7 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 {
 	MStatus status;
 	if (child.node().apiType() == MFn::kMesh)
-	{	
+	{
 		MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
 		(
 			child.node(),
@@ -321,7 +361,7 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		if (Parent.child(i).apiType() == MFn::Type::kTransform)
 		{
 			MFnDagNode childDag = Parent.child(i);
-			recursiveTransform(childDag,cameraTransform);
+			recursiveTransform(childDag, cameraTransform);
 		}
 	}
 
@@ -336,59 +376,59 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		//if (name == "t" || name == "tx" || name == "ty" || name == "tz")
 		//{
 
-			MString changed;
+		MString changed;
 
-			TranslationX = transNode.getTranslation(MSpace::kWorld).x;
-			TranslationY = transNode.getTranslation(MSpace::kWorld).y;
-			TranslationZ = transNode.getTranslation(MSpace::kWorld).z;
+		TranslationX = transNode.getTranslation(MSpace::kWorld).x;
+		TranslationY = transNode.getTranslation(MSpace::kWorld).y;
+		TranslationZ = transNode.getTranslation(MSpace::kWorld).z;
 
-			changed += "Attribute changed (World) T: ";
-			changed += TranslationX;
-			changed += " ";
-			changed += TranslationY;
-			changed += " ";
-			changed += TranslationZ;
+		changed += "Attribute changed (World) T: ";
+		changed += TranslationX;
+		changed += " ";
+		changed += TranslationY;
+		changed += " ";
+		changed += TranslationZ;
 
 		//}
 		//if (name == "r" || name == "rx" || name == "ry" || name == "rz")
 		//{
 
-			transNode.getRotationQuaternion(RotationX, RotationY, RotationZ, RotationW, MSpace::kWorld);
+		transNode.getRotationQuaternion(RotationX, RotationY, RotationZ, RotationW, MSpace::kWorld);
 
-			changed += " R: ";
-			changed += RotationX;
-			changed += " ";
-			changed += RotationY;
-			changed += " ";
-			changed += RotationZ;
-			
+		changed += " R: ";
+		changed += RotationX;
+		changed += " ";
+		changed += RotationY;
+		changed += " ";
+		changed += RotationZ;
+
 		//}
 		//if (name == "s" || name == "sx" || name == "sy" || name == "sz")
 		//{
 
-			transNode.getScale(scale);
+		transNode.getScale(scale);
 
-			changed += " S: ";
-			changed += scale[0];
-			changed += " ";
-			changed += scale[1];
-			changed += " ";
-			changed += scale[2];
-			MGlobal::displayInfo(changed);
+		changed += " S: ";
+		changed += scale[0];
+		changed += " ";
+		changed += scale[1];
+		changed += " ";
+		changed += scale[2];
+		MGlobal::displayInfo(changed);
 		//}
 
-			// send TRS data
+		// send TRS data
 
-			Translation nodeTransform;
+		Translation nodeTransform;
 
-			nodeTransform.TypeHeader = MsgType::TRANSFORM_NODE_TRANSFORM;
-			nodeTransform.Tx = TranslationX;
-			nodeTransform.Ty = TranslationY;
-			nodeTransform.Tz = TranslationZ;
+		nodeTransform.TypeHeader = MsgType::TRANSFORM_NODE_TRANSFORM;
+		nodeTransform.Tx = TranslationX;
+		nodeTransform.Ty = TranslationY;
+		nodeTransform.Tz = TranslationZ;
 
-			memcpy(Message, &nodeTransform, sizeof(Translation));
+		memcpy(Message, &nodeTransform, sizeof(Translation));
 
-			Comlib->send(Message, sizeof(Translation));
+		Comlib->send(Message, sizeof(Translation));
 
 	}
 	else
@@ -402,6 +442,11 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
+
+
+
+
+
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
 
@@ -436,7 +481,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					outColorPlug = myPlugs[i];
 					MGlobal::displayInfo(outColorPlug.node().apiTypeStr());
 				}
-			
+
 				MFnDependencyNode textureNode = outColorPlug.node();
 				MPlug PathPlug = textureNode.findPlug("fileTextureName");
 
@@ -481,11 +526,11 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			//MGlobal::displayInfo(print);
 		}
 		MStatus status;
-		
+
 		if (plug.node().apiType() != MFn::Type::kCamera)
 		{
-			MGlobal::displayInfo(plug.parent().partialName(false,false,false,false,true,false,NULL));
-		
+			MGlobal::displayInfo(plug.parent().partialName(false, false, false, false, true, false, NULL));
+
 			MGlobal::displayInfo(plug.name());
 
 			MGlobal::displayInfo(plug.partialName());
@@ -504,7 +549,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		/////////////////	TRANSFORM	///////////////////
 		if (plug.node().apiType() == MFn::Type::kTransform)
 		{
-			
+
 			MFnTransform myTrans(plug.node());
 			MFnDagNode myNode(plug.node());
 
@@ -516,184 +561,184 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			else
 			{
 
-				recursiveTransform(myNode,false);
+				recursiveTransform(myNode, false);
 			}
-			
+
 		}
 
 
 		/////////////////	MESH	///////////////////
 		else if (plug.node().apiType() == MFn::Type::kMesh)
 		{
-				MFnAttribute myAttr = plug.attribute();
-				MString attributeName = myAttr.name();
+			MFnAttribute myAttr = plug.attribute();
+			MString attributeName = myAttr.name();
 
-				if (attributeName == "pnts")
+			if (attributeName == "pnts")
+			{
+				MFnMesh myMesh(plug.node(), &status);
+
+				//MObjectArray Shaders;
+				//MIntArray myInts;
+				//myMesh.getConnectedShaders(0, Shaders, myInts);
+				//for (size_t i = 0; i < Shaders.length(); i++)
+				//{
+				//	MPlug plug;
+				//	MPlugArray connections;
+				//	MFnDependencyNode shaderGroup(Shaders[i]);
+				//	MString shaderName = shaderGroup.absoluteName();
+				//	MColor myColor;
+				//	MPlug shaderPlug = shaderGroup.findPlug("surfaceShader");
+				//	
+				//	shaderPlug.connectedTo(connections, true, false);
+				//	
+				//	for (size_t l = 0; l < connections.length(); l++)
+				//	{
+				//		MGlobal::displayInfo(connections[l].name());
+				//		if (connections[l].node().hasFn(MFn::kLambert))
+				//		{
+				//			MGlobal::displayInfo("Lambert");
+				//			MFnLambertShader lambShader(connections[l].node());
+				//			
+				//			MColor transp = lambShader.transparency();
+				//			MColor incan = lambShader.incandescence();
+				//			MColor diffuse = lambShader.diffuseCoeff(); // ??
+				//			myColor = lambShader.color();
+				//			MString print;
+				//			print += myColor.r;
+				//			print += " ";
+				//			print += myColor.g;
+				//			print += " ";
+				//			print += myColor.b;
+				//			print += " ";
+				//			print += myColor.a;
+				//			
+				//			MGlobal::displayInfo(print);
+				//			MPlugArray colorPlug;
+				//			lambShader.findPlug("color").connectedTo(colorPlug, true, false);
+				//			
+				//			for (size_t p = 0; p < colorPlug.length(); p++)
+				//			{
+				//				MGlobal::displayInfo("Texture: ");
+				//				MGlobal::displayInfo(colorPlug[p].name());
+				//				
+				//			}
+				//
+				//		}
+				//		
+				//		
+				//	}
+				//
+				//	MObject material;
+				//	MStatus check;
+				//
+				//	MString color("color");
+				//
+				//	MFnDependencyNode fnDependNode(material);
+				//
+				//	MPlug myPlug = fnDependNode.findPlug(color,check);
+				//	if (check == MS::kSuccess)
+				//	{
+				//		MString print("myPlug: ");
+				//		print += myPlug.name();
+				//		MGlobal::displayInfo(print);
+				//
+				//		MPlugArray cc;
+				//		plug.connectedTo(cc, true, false);
+				//
+				//		if (cc.length() > 0)
+				//		{
+				//			MGlobal::displayInfo(cc[0].name());
+				//			MObject src = cc[0];
+				//			if (src.hasFn(MFn::kFileTexture))
+				//			{
+				//				MFnDependencyNode fnFile(src);
+				//
+				//			}
+				//		}
+				//
+				//	}
+				//
+				//
+				//	
+				//
+				//	for (size_t j = 0; j < connections.length(); j++)
+				//	{
+				//		if (connections[j].node().hasFn(MFn::kLambert))
+				//		{
+				//			MPlugArray plugs;
+				//			MFnLambertShader lamberShader(connections[j].node());
+				//			lamberShader.findPlug("color").connectedTo(plugs, true, false);
+				//
+				//			for (size_t u = 0; u < plugs.length(); u++)
+				//			{
+				//				MGlobal::displayInfo(plugs[u].name());
+				//			}
+				//		}
+				//	}
+				//}
+
+				if (status)
 				{
-					MFnMesh myMesh(plug.node(), &status);
-
-					//MObjectArray Shaders;
-					//MIntArray myInts;
-					//myMesh.getConnectedShaders(0, Shaders, myInts);
-					//for (size_t i = 0; i < Shaders.length(); i++)
-					//{
-					//	MPlug plug;
-					//	MPlugArray connections;
-					//	MFnDependencyNode shaderGroup(Shaders[i]);
-					//	MString shaderName = shaderGroup.absoluteName();
-					//	MColor myColor;
-					//	MPlug shaderPlug = shaderGroup.findPlug("surfaceShader");
-					//	
-					//	shaderPlug.connectedTo(connections, true, false);
-					//	
-					//	for (size_t l = 0; l < connections.length(); l++)
-					//	{
-					//		MGlobal::displayInfo(connections[l].name());
-					//		if (connections[l].node().hasFn(MFn::kLambert))
-					//		{
-					//			MGlobal::displayInfo("Lambert");
-					//			MFnLambertShader lambShader(connections[l].node());
-					//			
-					//			MColor transp = lambShader.transparency();
-					//			MColor incan = lambShader.incandescence();
-					//			MColor diffuse = lambShader.diffuseCoeff(); // ??
-					//			myColor = lambShader.color();
-					//			MString print;
-					//			print += myColor.r;
-					//			print += " ";
-					//			print += myColor.g;
-					//			print += " ";
-					//			print += myColor.b;
-					//			print += " ";
-					//			print += myColor.a;
-					//			
-					//			MGlobal::displayInfo(print);
-					//			MPlugArray colorPlug;
-					//			lambShader.findPlug("color").connectedTo(colorPlug, true, false);
-					//			
-					//			for (size_t p = 0; p < colorPlug.length(); p++)
-					//			{
-					//				MGlobal::displayInfo("Texture: ");
-					//				MGlobal::displayInfo(colorPlug[p].name());
-					//				
-					//			}
-					//
-					//		}
-					//		
-					//		
-					//	}
-					//
-					//	MObject material;
-					//	MStatus check;
-					//
-					//	MString color("color");
-					//
-					//	MFnDependencyNode fnDependNode(material);
-					//
-					//	MPlug myPlug = fnDependNode.findPlug(color,check);
-					//	if (check == MS::kSuccess)
-					//	{
-					//		MString print("myPlug: ");
-					//		print += myPlug.name();
-					//		MGlobal::displayInfo(print);
-					//
-					//		MPlugArray cc;
-					//		plug.connectedTo(cc, true, false);
-					//
-					//		if (cc.length() > 0)
-					//		{
-					//			MGlobal::displayInfo(cc[0].name());
-					//			MObject src = cc[0];
-					//			if (src.hasFn(MFn::kFileTexture))
-					//			{
-					//				MFnDependencyNode fnFile(src);
-					//
-					//			}
-					//		}
-					//
-					//	}
-					//
-					//
-					//	
-					//
-					//	for (size_t j = 0; j < connections.length(); j++)
-					//	{
-					//		if (connections[j].node().hasFn(MFn::kLambert))
-					//		{
-					//			MPlugArray plugs;
-					//			MFnLambertShader lamberShader(connections[j].node());
-					//			lamberShader.findPlug("color").connectedTo(plugs, true, false);
-					//
-					//			for (size_t u = 0; u < plugs.length(); u++)
-					//			{
-					//				MGlobal::displayInfo(plugs[u].name());
-					//			}
-					//		}
-					//	}
-					//}
-
-					if (status)
+					if (plug.logicalIndex() < 100000) // for not printing out some weird index
 					{
-						if (plug.logicalIndex() < 100000) // for not printing out some weird index
-						{
-							MPoint myPoint;
+						MPoint myPoint;
 
-							myMesh.getPoint(plug.logicalIndex(), myPoint, MSpace::kTransform);
+						myMesh.getPoint(plug.logicalIndex(), myPoint, MSpace::kTransform);
 
-							MString Vertex = "Vertex Changed: ";
-							Vertex += "[";
-							Vertex += plug.logicalIndex();
-							Vertex += "]";
-							Vertex += " ";
-							Vertex += myPoint.x;
-							Vertex += " ";
-							Vertex += myPoint.y;
-							Vertex += " ";
-							Vertex += myPoint.z;
+						MString Vertex = "Vertex Changed: ";
+						Vertex += "[";
+						Vertex += plug.logicalIndex();
+						Vertex += "]";
+						Vertex += " ";
+						Vertex += myPoint.x;
+						Vertex += " ";
+						Vertex += myPoint.y;
+						Vertex += " ";
+						Vertex += myPoint.z;
 
-							MGlobal::displayInfo(Vertex);
+						MGlobal::displayInfo(Vertex);
 
-						}
-					}
-					else
-					{
-						MGlobal::displayInfo("failed to make a Mesh");
-						MGlobal::displayError(status.errorString());
 					}
 				}
-				else if (plug.partialName() == "pv")
+				else
 				{
-
-					MFnMesh myMesh(plug.node(), &status);
-					// UV stuff;
-					MFloatArray UArr;
-					MFloatArray VArr;
-
-					myMesh.getUVs(UArr, VArr);
-
-					for (uint i = 0; i < UArr.length(); i++)
-					{
-						MString msg;
-						msg += "U array at: ";
-						msg += "[";
-						msg += i;
-						msg += "]";
-						msg += " ";
-						msg += UArr[i];
-						MGlobal::displayInfo(msg);
-					}
-					for (uint j = 0; j < VArr.length(); j++)
-					{
-						MString msg;
-						msg += "V array at: ";
-						msg += "[";
-						msg += j;
-						msg += "]";
-						msg += " ";
-						msg += VArr[j];
-						MGlobal::displayInfo(msg);
-					}
+					MGlobal::displayInfo("failed to make a Mesh");
+					MGlobal::displayError(status.errorString());
 				}
+			}
+			else if (plug.partialName() == "pv")
+			{
+
+				MFnMesh myMesh(plug.node(), &status);
+				// UV stuff;
+				MFloatArray UArr;
+				MFloatArray VArr;
+
+				myMesh.getUVs(UArr, VArr);
+
+				for (uint i = 0; i < UArr.length(); i++)
+				{
+					MString msg;
+					msg += "U array at: ";
+					msg += "[";
+					msg += i;
+					msg += "]";
+					msg += " ";
+					msg += UArr[i];
+					MGlobal::displayInfo(msg);
+				}
+				for (uint j = 0; j < VArr.length(); j++)
+				{
+					MString msg;
+					msg += "V array at: ";
+					msg += "[";
+					msg += j;
+					msg += "]";
+					msg += " ";
+					msg += VArr[j];
+					MGlobal::displayInfo(msg);
+				}
+			}
 		}
 
 		/////////////////	POINTLIGHTS		///////////////////
@@ -716,13 +761,13 @@ void nodeAdded(MObject &node, void* clientData)
 			MGlobal::displayInfo(mesh.name());
 		}
 	}
-	
+
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MObject callBackNode;
-	
+
 	MStatus res = MS::kSuccess;
 
 	MFnPlugin MayaApplication(obj, "Maya plugin", "1.0", "Any", &res);
@@ -736,7 +781,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	Comlib = new ComlibMaya(BUFFERSIZE);
 	Message = new char[MEGABYTE];
-	
+
 
 	MStatus status = MS::kSuccess;
 
@@ -800,8 +845,20 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 		}
 	}
-	
 
+	MCallbackId CameraviewID = MUiMessage::add3dViewPostRenderMsgCallback(
+		"modelPanel4",
+		CameraViewCallback,
+		NULL,
+		&status);
+
+	if (status == MS::kSuccess)
+	{
+		if (myCallbackArray.append(CameraviewID) == MS::kSuccess)
+		{
+
+		}
+	}
 	//MStringArray eventNames;
 	//MEventMessage::getEventNames(eventNames);
 	//for (size_t i = 0; i < eventNames.length(); i++)
@@ -822,5 +879,5 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 
 	delete Comlib;
 	return MS::kSuccess;
-	
+
 }
