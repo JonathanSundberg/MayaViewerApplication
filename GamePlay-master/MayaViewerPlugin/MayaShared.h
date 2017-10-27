@@ -8,31 +8,34 @@ enum class MsgType
 
 	VERTEX_TRANSLATION,
 	TRANSFORM_NODE_TRANSFORM,
-	TRANSFORM_NODE_ROTATE,
-	TRANSFORM_NODE_SCALE,
+	CAMERA_UPDATE
+
 };
 
 struct Translation
 {
 	MsgType TypeHeader;
-	double Tx;
-	double Ty;
-	double Tz;
+	float Tx;
+	float Ty;
+	float Tz;
+	char name[75];
 };
 
 struct Rotation
 {
-	double RotX;
-	double RotY;
-	double RotZ;
-	double RotW;
+	float RotX;
+	float RotY;
+	float RotZ;
+	float RotW;
+	char name[75];
 };
 
 struct Scaling
 {
-	double ScaleX;
-	double ScaleY;
-	double ScaleZ;
+	float ScaleX;
+	float ScaleY;
+	float ScaleZ;
+	char name[75];
 };
 struct Vertex {
 	float position[3];
@@ -47,5 +50,11 @@ struct MayaMesh {
 	int sizeOfVertices;
 	int sizeOfNormalIndex;
 	int sizeOfNormals;
+	char name[75];
+};
+
+struct Camera {
+	MsgType headerType;
+	float fViewMatrix[4][4];
 	char name[75];
 };

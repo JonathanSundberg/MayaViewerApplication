@@ -56,10 +56,21 @@ private:
      * Draws the scene each frame.
      */
     bool drawScene(Node* node);
-	
+	/*
+	* Creates a new mesh from a newly created mesh in maya
+	* @param[in] msg The message containing data about the mesh
+	*/
 	void CreateMesh(char* &msg);
+	/*
+	*	Unpakcs the message sent from maya
+	*/
 	void unPack();
+	/*
+	* Handles transform changes made in maya
 
+	*/
+	void CameraUpdated(char* &msg);
+	void TransformChanged(char* &msg);
     Scene* _scene;
     bool _wireframe;
 };

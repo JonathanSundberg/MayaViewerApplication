@@ -27,7 +27,21 @@ void Main::initialize()
 
     Receiver = new Comlib(BUFFERSIZE);
 }
+void Main::CameraUpdated(char* &msg)
+{
 
+}
+void Main::TransformChanged(char* &msg)
+{
+	Translation *translate = new Translation();
+	memcpy(translate, msg, sizeof(Translation));
+
+	char* nodeName = translate->name;
+
+	Vector3 transVec(translate->Tx, translate->Ty, translate->Tz);
+	Node *node = _scene->findNode(nodeName);
+	_scene->findNode(translate->name)->setTranslation(transVec);
+}
 void Main::CreateMesh(char* &msg)
 {
     
@@ -152,13 +166,16 @@ void Main::CreateMesh(char* &msg)
 	mats[0]->getStateBlock()->setDepthTest(true);
 	mats[0]->getStateBlock()->setDepthWrite(true);
 	
-    char nodeName[20] = {};
-    sprintf(nodeName, "cube1");
+    char nodeName[75] = {};
+    sprintf(nodeName, meshRecieved->name);
     
 	Node *node = _scene->addNode(nodeName);
+	
 	node->setDrawable(models[0]);
-	SAFE_RELEASE(models[0])
+	SAFE_RELEASE(models[0]);
+	delete[] meshRecieved;
 }
+
 void Main::unPack()
 {
 	char* Package = nullptr;
@@ -177,13 +194,19 @@ void Main::unPack()
 	switch (Type)
 	{
 
-	case 0:	
+	case (int)MsgType::CREATE_MESH:	
 		//	CREATE_MESH
 		CreateMesh(Package);		
 		break;
-	case 1:
+	case (int)MsgType::VERTEX_TRANSLATION:
 		//	Another Type
-
+		break;
+	case (int)MsgType::TRANSFORM_NODE_TRANSFORM:
+		TransformChanged(Package);
+		break;
+	case(int)MsgType::CAMERA_UPDATE:
+		CameraUpdated(Package);
+		break;
 	default:
 		break;
 	}
@@ -206,7 +229,7 @@ void Main::update(float elapsedTime)
     // Rotate model
     _scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
 
-
+	
 
 }
 

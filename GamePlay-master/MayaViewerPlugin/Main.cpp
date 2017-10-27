@@ -42,6 +42,10 @@ void CameraViewCallback(const MString &str, void* clientData)
 		cameraPos = camera.inclusiveMatrix();
 		
 
+		float fViewMatrix[4][4];
+
+
+
 		for (size_t i = 0; i < 4; i++)
 		{
 
@@ -49,13 +53,48 @@ void CameraViewCallback(const MString &str, void* clientData)
 			for (size_t j = 0; j < 4; j++)
 			{
 
-				msg += cameraPos.matrix[i][j];
-				msg += " ";
+				fViewMatrix[i][j] = cameraPos[i][j];
+				/*msg += cameraPos.matrix[i][j];
+				msg += " ";*/
 			}
-			msg += "\n";
+		/*	msg += "\n";*/
 		}
 
-		MGlobal::displayInfo(msg);
+		/*MGlobal::displayInfo(msg);*/
+		Camera myCamera;
+
+		myCamera.headerType = MsgType::CAMERA_UPDATE;
+		for (size_t i = 0; i < 4; i++)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				myCamera.fViewMatrix[i][j] = fViewMatrix[i][j];
+			}
+		}
+		MFnCamera MyCam(camera.node(),&status);
+		if (status == MS::kSuccess)
+		{
+			
+		}
+
+		string CamName = MyCam.name().asChar();
+		strncpy(myCamera.name, CamName.c_str(), sizeof(myCamera.name));
+		myCamera.name[sizeof(myCamera.name) - 1] = 0;
+
+		
+		size_t cpySize = 0;
+		cpySize = sizeof(myCamera);;
+		memcpy(Message, &myCamera, cpySize);
+		
+
+
+		while (true)
+		{
+			if (Comlib->send(Message,sizeof(myCamera)))
+			{
+				break;
+			}
+		}
 	}
 
 
@@ -156,7 +195,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			meshIterator.numTriangles(triCount);
 			meshIterator.getTriangles(triPoints, vtxTriIdx);//Triangle vertices and vertex indices
 			int triLength = vtxTriIdx.length();
-            cerr << "Number of vertices in face: " << triPoints.length() << endl;
+         //   cerr << "Number of vertices in face: " << triPoints.length() << endl;
 			Vertex vertex;
 		
 			if (vtxTriIdx.length() > 0)
@@ -165,7 +204,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 				vtxTriIdx.get(faceVertexIndex);
 				for (size_t i = 0; i < vtxTriIdx.length(); i++)//loops through each vertex index
 				{
-					cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
+			//		cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
 					vtxIndices.push_back(faceVertexIndex[i]);
 				}
 				//delete[] faceVertexIndex;
@@ -195,7 +234,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 				for (size_t i = 0; i < triCount; i++)//loops through each triangle in the current face
 				{
                     localIndex[i] = GetLocalIndex(polyVertexIndex, faceTriangle[i]);
-                    cerr << "Local index length: " << localIndex[i].length() << endl;
+              //      cerr << "Local index length: " << localIndex[i].length() << endl;
 
 					int localIndexArray[1000];// = new int[localIndex[i].length()];
                     localIndex[i].get(localIndexArray);
@@ -204,7 +243,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                     { 
                         int currentIndex = -1;
                        currentIndex = meshIterator.normalIndex(localIndexArray[i]);
-                       cerr << "Current normal index " << currentIndex << endl;
+               //        cerr << "Current normal index " << currentIndex << endl;
                        normalIndices.push_back(currentIndex);
                     }
 				}
@@ -229,7 +268,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                     int currentIndex = -1;
                     currentIndex = meshIterator.normalIndex(localIndexArray[i]);
                     normalIndices.push_back(currentIndex);
-                    cerr << "Current normal index: " << currentIndex << endl;
+          //          cerr << "Current normal index: " << currentIndex << endl;
                 }
               //  delete[] localIndexArray;
 			}
@@ -241,12 +280,15 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		
 		createdMesh.sizeOfVtxIndex = vtxIndices.size();
 
-		//Getting vertex data
-		MFloatPointArray vtxArray;
-		newMesh.getPoints(vtxArray);
+		//Getting name for the transform node
+
 		string meshName = newMesh.name().asChar();
 		strncpy(createdMesh.name, meshName.c_str(), sizeof(createdMesh.name));
 		createdMesh.name[sizeof(createdMesh.name) - 1] = 0;
+		
+		//Getting vertex data
+		MFloatPointArray vtxArray;
+		newMesh.getPoints(vtxArray);
 		//cerr << "Vertex count: " << vtxArray.length() << endl;
 		for (size_t i = 0; i < vtxArray.length(); i++) 
 		{
@@ -255,7 +297,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			vtx.position[1] = vtxArray[i].y;
 			vtx.position[2] = vtxArray[i].z;
 			vertices.push_back(vtx);
-			cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
+	//		cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
 		}
 		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
 
@@ -268,7 +310,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			Normal meshNormal;
 			float arr[3];
 			normals[i].get(arr);
-			cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
+//			cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
 			meshNormal.normal[0] = arr[0];
 			meshNormal.normal[1] = arr[1];
 			meshNormal.normal[2] = arr[2];
@@ -370,17 +412,19 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 
 		//MString name = plug.partialName();
 		double scale[3] = { 0,0,0 };
+		float fScale[3] = { 0, 0, 0 };
 		double RotationX, RotationY, RotationZ, RotationW;
-		double TranslationX, TranslationY, TranslationZ;
+		float Rx, Ry, Rz, Rw;
+		float TranslationX, TranslationY, TranslationZ;
 
 		//if (name == "t" || name == "tx" || name == "ty" || name == "tz")
 		//{
 
 		MString changed;
 
-		TranslationX = transNode.getTranslation(MSpace::kWorld).x;
-		TranslationY = transNode.getTranslation(MSpace::kWorld).y;
-		TranslationZ = transNode.getTranslation(MSpace::kWorld).z;
+		TranslationX = (float)transNode.getTranslation(MSpace::kWorld).x;
+		TranslationY = (float)transNode.getTranslation(MSpace::kWorld).y;
+		TranslationZ = (float)transNode.getTranslation(MSpace::kWorld).z;
 
 		changed += "Attribute changed (World) T: ";
 		changed += TranslationX;
@@ -394,6 +438,10 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		//{
 
 		transNode.getRotationQuaternion(RotationX, RotationY, RotationZ, RotationW, MSpace::kWorld);
+		Rx = RotationX;
+		Ry = RotationY;
+		Rz = RotationZ;
+		Rw = RotationW;
 
 		changed += " R: ";
 		changed += RotationX;
@@ -407,6 +455,10 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		//{
 
 		transNode.getScale(scale);
+		for (size_t i = 0; i < 3; i++)
+		{
+			fScale[i] = scale[i];
+		}
 
 		changed += " S: ";
 		changed += scale[0];
@@ -425,10 +477,27 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		nodeTransform.Tx = TranslationX;
 		nodeTransform.Ty = TranslationY;
 		nodeTransform.Tz = TranslationZ;
+			
+
+		MDagPath tempPath;
+		Parent.getPath(tempPath);
+		tempPath.extendToShape();//Getting the shape node
+
+		string mName = tempPath.partialPathName().asChar();
+		strncpy(nodeTransform.name, mName.c_str(), sizeof(nodeTransform.name));
+		nodeTransform.name[sizeof(nodeTransform.name) - 1] = 0;
 
 		memcpy(Message, &nodeTransform, sizeof(Translation));
 
-		Comlib->send(Message, sizeof(Translation));
+		while (true)
+		{
+
+			if (Comlib->send(Message, sizeof(Translation)))
+			{
+				break;
+			}
+
+		}
 
 	}
 	else
@@ -556,7 +625,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			if (myTrans.name() == "persp")
 			{
 				//recursive with camera
-				recursiveTransform(myNode, true);
+				//recursiveTransform(myNode, true);
 			}
 			else
 			{
