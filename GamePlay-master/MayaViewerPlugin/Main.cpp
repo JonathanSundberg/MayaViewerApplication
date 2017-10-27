@@ -735,7 +735,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 
 	Comlib = new ComlibMaya(BUFFERSIZE);
-	Message = new char[MEGABYTE * 5];
+	Message = new char[MEGABYTE];
 	
 
 	MStatus status = MS::kSuccess;

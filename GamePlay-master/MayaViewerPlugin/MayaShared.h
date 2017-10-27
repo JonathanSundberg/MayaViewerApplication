@@ -1,6 +1,6 @@
 #pragma once
-#define BUFFERSIZE (200 * 1024)
-#define MEGABYTE 1024
+#define BUFFERSIZE (200 * 1<<20)
+#define MEGABYTE 1 * 1<<20
 #include <vector>
 enum class MsgType
 {
