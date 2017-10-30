@@ -1,18 +1,26 @@
 #ifndef Main_H_
 #define Main_H_
-
+#include <string>
+#include <vector>
 #include "gameplay.h"
 //#include "MayaShared.h"
 
 using namespace gameplay;
 
+
+//struct MeshContainer 
+//{
+//	vector<Model> models;
+//	vector<Mesh*> meshes;
+//	vector<string> name;
+//	
+//};
 /**
  * Main game class.
  */
 class Main: public Game
 {
 public:
-
     /**
      * Constructor.
      */
@@ -67,10 +75,22 @@ private:
 	void unPack();
 	/*
 	* Handles transform changes made in maya
-
+	*/
+	void TransformChanged(char* &msg);
+	/*
+	* Updates changes to camera
 	*/
 	void CameraUpdated(char* &msg);
-	void TransformChanged(char* &msg);
+	/*
+	* Expands the mesh container if the number of meshes exceeds the current capacity
+	*/
+	
+	
+
+
+	//MeshContainer meshContainer;
+	
+	unsigned int meshCount;
     Scene* _scene;
     bool _wireframe;
 };

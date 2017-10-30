@@ -19,11 +19,15 @@ void timerCallback(float elapsedTime, float lastTime, void* clientData)
 	msg += elapsedTime;
 	//	MGlobal::displayInfo(msg);
 }
-
+float calcAoV(float aperture, float fl)
+{
+	float fovCalc = aperture * 0.5 / (fl * 0.03937);
+	float fov = 2.0f * atan(fovCalc) / 3.14159 * 180.0;
+	return fov;
+}
 void CameraViewCallback(const MString &str, void* clientData)
 {
 	M3dView view;
-	MGlobal::displayInfo("ViewCallBack");
 
 	MStatus status = MS::kSuccess;
 
@@ -35,33 +39,27 @@ void CameraViewCallback(const MString &str, void* clientData)
 		MDagPath camera;
 		MString msg;
 		view.modelViewMatrix(viewMatrix);
-
-
+		double Rx, Ry, Rz, Rw;
+		float fRx, fRy, fRz, fRw;
 
 		view.getCamera(camera);
 		cameraPos = camera.inclusiveMatrix();
 		
-
 		float fViewMatrix[4][4];
-
-
 
 		for (size_t i = 0; i < 4; i++)
 		{
-
-			// i on 4 is translation (position) of the camera
+			// i on 3 is translation (position) of the camera
 			for (size_t j = 0; j < 4; j++)
 			{
-
 				fViewMatrix[i][j] = cameraPos[i][j];
 				/*msg += cameraPos.matrix[i][j];
 				msg += " ";*/
 			}
 		/*	msg += "\n";*/
 		}
-
 		/*MGlobal::displayInfo(msg);*/
-		Camera myCamera;
+		MCamera myCamera;
 
 		myCamera.headerType = MsgType::CAMERA_UPDATE;
 		for (size_t i = 0; i < 4; i++)
@@ -76,17 +74,36 @@ void CameraViewCallback(const MString &str, void* clientData)
 		{
 			
 		}
+		//Getting the rotation from the transform node of the camera
+		MFnTransform camTrans = MyCam.parent(0, &status);
+		camTrans.getRotationQuaternion(Rx, Ry, Rz, Rw);
+		fRx = Rx;
+		fRy = Ry;
+		fRz = Rz;
+		fRw = Rw;
+		myCamera.Rot[0] = fRx;
+		myCamera.Rot[1] = fRy;
+		myCamera.Rot[2] = fRz;
+		myCamera.Rot[3] = fRw;
 
-		string CamName = MyCam.name().asChar();
+		//Camera attributes
+		myCamera.aspectRatio = (float)MyCam.aspectRatio();
+		myCamera.FOV = calcAoV((float)MyCam.horizontalFilmAperture(), (float)MyCam.focalLength());
+		myCamera.isOrtho = MyCam.isOrtho();
+		myCamera.farPlane = (float)MyCam.farClippingPlane();
+		myCamera.nearPlane = (float)MyCam.nearClippingPlane();
+
+
+		string CamName = "camera";
+		//string CamName = MyCam.name().asChar();
 		strncpy(myCamera.name, CamName.c_str(), sizeof(myCamera.name));
 		myCamera.name[sizeof(myCamera.name) - 1] = 0;
-
 		
+		MVector rightVec = MyCam.rightDirection();
+	
 		size_t cpySize = 0;
 		cpySize = sizeof(myCamera);;
-		memcpy(Message, &myCamera, cpySize);
-		
-
+		memcpy(Message, &myCamera, cpySize);	
 
 		while (true)
 		{
@@ -96,8 +113,6 @@ void CameraViewCallback(const MString &str, void* clientData)
 			}
 		}
 	}
-
-
 }
 
 void findCamera()
@@ -389,7 +404,7 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 {
 	MStatus status;
-	MGlobal::displayInfo("Entered rekursive transform");
+	//MGlobal::displayInfo("Entered rekursive transform");
 
 	MDagPath path;
 
@@ -466,18 +481,25 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		changed += scale[1];
 		changed += " ";
 		changed += scale[2];
-		MGlobal::displayInfo(changed);
+	//	MGlobal::displayInfo(changed);
 		//}
 
 		// send TRS data
 
-		Translation nodeTransform;
+		TransformData nodeTransform;
 
 		nodeTransform.TypeHeader = MsgType::TRANSFORM_NODE_TRANSFORM;
 		nodeTransform.Tx = TranslationX;
 		nodeTransform.Ty = TranslationY;
 		nodeTransform.Tz = TranslationZ;
-			
+		nodeTransform.Rx = RotationX;
+		nodeTransform.Ry = RotationY;
+		nodeTransform.Rz = RotationZ;
+		nodeTransform.Rw = RotationW;
+		nodeTransform.Sx = fScale[0];
+		nodeTransform.Sy = fScale[1];
+		nodeTransform.Sz = fScale[2];
+
 
 		MDagPath tempPath;
 		Parent.getPath(tempPath);
@@ -487,12 +509,12 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		strncpy(nodeTransform.name, mName.c_str(), sizeof(nodeTransform.name));
 		nodeTransform.name[sizeof(nodeTransform.name) - 1] = 0;
 
-		memcpy(Message, &nodeTransform, sizeof(Translation));
+		memcpy(Message, &nodeTransform, sizeof(TransformData));
 
 		while (true)
 		{
 
-			if (Comlib->send(Message, sizeof(Translation)))
+			if (Comlib->send(Message, sizeof(TransformData)))
 			{
 				break;
 			}
@@ -523,12 +545,12 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		if (plug.node().hasFn(MFn::kLambert))
 		{
 			MStatus status;
-			MGlobal::displayInfo(plug.name());
+			/*MGlobal::displayInfo(plug.name());
 			MGlobal::displayInfo("Material attribute changed");
-			MGlobal::displayInfo(plug.node().apiTypeStr());
+			MGlobal::displayInfo(plug.node().apiTypeStr());*/
 			MFnLambertShader MyLambert(plug.node());
 
-			MGlobal::displayInfo(MyLambert.absoluteName());
+			//MGlobal::displayInfo(MyLambert.absoluteName());
 
 			MColor transp = MyLambert.transparency();
 			MColor incan = MyLambert.incandescence();
@@ -545,10 +567,10 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 				for (size_t i = 0; i < myPlugs.length(); i++)
 				{
-					MGlobal::displayInfo("myPlug connected plugs: ");
-					MGlobal::displayInfo(myPlugs[i].name());
+				//	MGlobal::displayInfo("myPlug connected plugs: ");
+				//	MGlobal::displayInfo(myPlugs[i].name());
 					outColorPlug = myPlugs[i];
-					MGlobal::displayInfo(outColorPlug.node().apiTypeStr());
+				//	MGlobal::displayInfo(outColorPlug.node().apiTypeStr());
 				}
 
 				MFnDependencyNode textureNode = outColorPlug.node();
@@ -556,8 +578,8 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 				MString texturename;
 				PathPlug.getValue(texturename);
-				MGlobal::displayInfo("Texture name: ");
-				MGlobal::displayInfo(texturename);
+				//MGlobal::displayInfo("Texture name: ");
+			//	MGlobal::displayInfo(texturename);
 			}
 
 			/*print += myColor.r;
@@ -598,21 +620,21 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 		if (plug.node().apiType() != MFn::Type::kCamera)
 		{
-			MGlobal::displayInfo(plug.parent().partialName(false, false, false, false, true, false, NULL));
+			/*MGlobal::displayInfo(plug.parent().partialName(false, false, false, false, true, false, NULL));
 
 			MGlobal::displayInfo(plug.name());
 
 			MGlobal::displayInfo(plug.partialName());
 
-			MGlobal::displayInfo(plug.node().apiTypeStr());
+			MGlobal::displayInfo(plug.node().apiTypeStr());*/
 		}
 
 		/////////////////	CAMERA	///////////////////
 		if (plug.node().apiType() == MFn::Type::kCamera)
 		{
-			MGlobal::displayInfo("Camera attribute changed");
+	/*		MGlobal::displayInfo("Camera attribute changed");
 			MGlobal::displayInfo(plug.name());
-			MGlobal::displayInfo(plug.node().apiTypeStr());
+			MGlobal::displayInfo(plug.node().apiTypeStr());*/
 		}
 
 		/////////////////	TRANSFORM	///////////////////
@@ -765,14 +787,15 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 						Vertex += " ";
 						Vertex += myPoint.z;
 
-						MGlobal::displayInfo(Vertex);
+
+						//MGlobal::displayInfo(Vertex);
 
 					}
 				}
 				else
 				{
-					MGlobal::displayInfo("failed to make a Mesh");
-					MGlobal::displayError(status.errorString());
+				/*	MGlobal::displayInfo("failed to make a Mesh");
+					MGlobal::displayError(status.errorString());*/
 				}
 			}
 			else if (plug.partialName() == "pv")
@@ -794,7 +817,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					msg += "]";
 					msg += " ";
 					msg += UArr[i];
-					MGlobal::displayInfo(msg);
+					//MGlobal::displayInfo(msg);
 				}
 				for (uint j = 0; j < VArr.length(); j++)
 				{
@@ -805,7 +828,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					msg += "]";
 					msg += " ";
 					msg += VArr[j];
-					MGlobal::displayInfo(msg);
+					//MGlobal::displayInfo(msg);
 				}
 			}
 		}
@@ -813,7 +836,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		/////////////////	POINTLIGHTS		///////////////////
 		if (plug.node().apiType() == MFn::kPointLight)
 		{
-			MGlobal::displayInfo("Light Attribute Changed!");
+			//MGlobal::displayInfo("Light Attribute Changed!");
 		}
 	}
 }
@@ -925,7 +948,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 	{
 		if (myCallbackArray.append(CameraviewID) == MS::kSuccess)
 		{
-
+			MGlobal::displayInfo("Camera changed CALLBAAACK!!");
 		}
 	}
 	//MStringArray eventNames;

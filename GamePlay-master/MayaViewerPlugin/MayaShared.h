@@ -12,12 +12,19 @@ enum class MsgType
 
 };
 
-struct Translation
+struct TransformData
 {
 	MsgType TypeHeader;
 	float Tx;
 	float Ty;
 	float Tz;
+	float Rx;
+	float Ry;
+	float Rz;
+	float Rw;
+	float Sx;
+	float Sy;
+	float Sz;
 	char name[75];
 };
 
@@ -53,8 +60,14 @@ struct MayaMesh {
 	char name[75];
 };
 
-struct Camera {
+struct MCamera {
 	MsgType headerType;
 	float fViewMatrix[4][4];
+	float Rot[4];
+	float aspectRatio;
+	float FOV;
+	float farPlane;
+	float nearPlane;
+	bool isOrtho;
 	char name[75];
 };

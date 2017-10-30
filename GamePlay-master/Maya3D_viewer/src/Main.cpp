@@ -1,46 +1,107 @@
 #include "Main.h"
 #include "Comlib.h"
 #include "MayaShared.h"
+unsigned int meshCount;
+unsigned int containerSize;
+struct MeshData {
+	Model* model;
+	Mesh* mesh;
+	string name;
+	vector<Vertex> vertices;
+	vector<Normal> normals;
+};
+struct MeshContainer
+{
+	vector<Model*> models;
+	vector<Mesh*> meshes;
+	vector<string> name;
+	
+	vector<float*> vertexBuffer;
 
+};
 // Declare our game instance
 Main game;
 Comlib* Receiver;
+MeshContainer container;
+MeshData* meshData;
 
 Main::Main()
     : _scene(NULL), _wireframe(false)
 {
 }
-
+void expandContainer() {
+	//MeshData* temp = new MeshData[containerSize];
+	//for (size_t i = 0; i < containerSize; i++)
+	//{
+	//	temp[i]->model = Model::create(meshData->mesh);
+	//	temp->mesh(meshData->mesh);
+	//}
+	//
+}
 void Main::initialize()
 {
     // Load game scene from file
     _scene = Scene::load("res/demo.scene");
-
+	
     // Get the box model and initialize its material parameter values and bindings
     Node* boxNode = _scene->findNode("box");
     Model* boxModel = dynamic_cast<Model*>(boxNode->getDrawable());
     Material* boxMaterial = boxModel->getMaterial();
 
     // Set the aspect ratio for the scene's camera to match the current resolution
-    _scene->getActiveCamera()->setAspectRatio(getAspectRatio());
+	Camera* cam = Camera::createPerspective(45.0f, 1920 / 1080.0f, 0.1f, 100.0f);
+	Node* camNode = _scene->addNode("camera");
 	
+	camNode->setCamera(cam);
+	_scene->setActiveCamera(cam);
+	camNode->setTranslation(0, 0, 10);
+	SAFE_RELEASE(cam);
+
+	//Initializing container that stores all the meshes
+	containerSize = 10;
+	meshData = new MeshData[containerSize];
 
     Receiver = new Comlib(BUFFERSIZE);
 }
+unsigned int findMesh(string meshName)
+{
+	unsigned int index = -1;
+	for (size_t i = 0; i < container.name.size(); i++)
+	{
+		if (container.name[i] == meshName)
+			return i;
+	}
+
+	return index;
+}
 void Main::CameraUpdated(char* &msg)
 {
+	MCamera* mCam = new MCamera();
+	memcpy(mCam, msg, sizeof(MCamera));
 
+	Vector3 translateVec(mCam->fViewMatrix[3][0], mCam->fViewMatrix[3][1], mCam->fViewMatrix[3][2]);
+	_scene->getActiveCamera()->getNode()->setTranslation(translateVec);
+	_scene->getActiveCamera()->getNode()->setRotation(mCam->Rot[0], mCam->Rot[1], mCam->Rot[2], mCam->Rot[3]);
+	_scene->getActiveCamera()->setAspectRatio(mCam->aspectRatio);
+	_scene->getActiveCamera()->setFieldOfView(mCam->FOV);
+
+	delete[] mCam;
 }
 void Main::TransformChanged(char* &msg)
 {
-	Translation *translate = new Translation();
-	memcpy(translate, msg, sizeof(Translation));
+	TransformData *transformData = new TransformData();
+	memcpy(transformData, msg, sizeof(TransformData));
 
-	char* nodeName = translate->name;
-
-	Vector3 transVec(translate->Tx, translate->Ty, translate->Tz);
-	Node *node = _scene->findNode(nodeName);
-	_scene->findNode(translate->name)->setTranslation(transVec);
+	Vector3 transVec(transformData->Tx, transformData->Ty, transformData->Tz);
+	_scene->findNode(transformData->name)->setTranslation(transVec);
+	_scene->findNode(transformData->name)->setRotation(transformData->Rx, transformData->Ry, transformData->Rz, transformData->Rw);
+	_scene->findNode(transformData->name)->setScale(transformData->Sx, transformData->Sy, transformData->Sz);
+	unsigned int index = findMesh(transformData->name);
+	
+	Mesh* tempMesh;
+	Model* model;
+	
+	delete[] transformData;
 }
 void Main::CreateMesh(char* &msg)
 {
@@ -64,7 +125,6 @@ void Main::CreateMesh(char* &msg)
 		a = vtxIndexArr[i];
 
 	}
-
     ///////////////     VERTEX INFORMAION    \\\\\\\\\\\\\\\\\\
 
 	Vertex vertex;
@@ -75,8 +135,6 @@ void Main::CreateMesh(char* &msg)
 		vtxVector.push_back(vertex);
 	}
 	head += sizeof(Vertex) * meshRecieved->sizeOfVertices;
-
-
     ///////////////     NORMAL INDEX    \\\\\\\\\\\\\\\\\\
 
 	int* NrmIndexArr = new int[meshRecieved->sizeOfNormalIndex];
@@ -87,7 +145,6 @@ void Main::CreateMesh(char* &msg)
 		int b = NrmIndexArr[i];
 	}
 	head += sizeof(int)*meshRecieved->sizeOfNormalIndex;
-
     ///////////////     NORMALS   \\\\\\\\\\\\\\\\\\
 
 	Normal norm;
@@ -100,8 +157,6 @@ void Main::CreateMesh(char* &msg)
 	head += sizeof(Normal)*meshRecieved->sizeOfNormals;
 	int arrayIt = meshRecieved->sizeOfVtxIndex * 6;
 	float* meshVertexData = new float[meshRecieved->sizeOfVtxIndex * 6];
-
-
     ///////////////     CREATE MESH   \\\\\\\\\\\\\\\\\\
 
 	size_t index = 0;
@@ -145,7 +200,7 @@ void Main::CreateMesh(char* &msg)
 	newMesh->setVertexData(meshVertexData, 0, meshRecieved->sizeOfVtxIndex);
 	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX32, meshRecieved->sizeOfVtxIndex);
     meshPart->setIndexData(indices, 0, meshRecieved->sizeOfVtxIndex);
-
+	
     Model* models[10];
 	Material *mats[10];
 
@@ -171,8 +226,20 @@ void Main::CreateMesh(char* &msg)
     
 	Node *node = _scene->addNode(nodeName);
 	
+	//Adding the meshes and models to the meshcontainer struct
+	
+	container.meshes.push_back(newMesh);
+	container.models.push_back(Model::create(newMesh));
+	container.name.push_back(nodeName);
+	
+
+
 	node->setDrawable(models[0]);
 	SAFE_RELEASE(models[0]);
+	meshCount++;
+	delete[] NrmIndexArr;
+	delete[] vtxIndexArr;
+	delete[] meshVertexData;
 	delete[] meshRecieved;
 }
 
@@ -278,3 +345,4 @@ void Main::touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int contactI
         break;
     };
 }
+
