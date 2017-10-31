@@ -19,6 +19,9 @@ struct MeshContainer
 	vector<float*> vertexBuffer;
 
 };
+
+Model** myModels = new Model*[1000];
+int myModelIndex = 0;
 // Declare our game instance
 Main game;
 Comlib* Receiver;
@@ -103,11 +106,36 @@ void Main::TransformChanged(char* &msg)
 	
 	delete[] transformData;
 }
+
+void Main::UpdateMeshData(char* &msg)
+{
+	MayaMesh* meshRecieved = new MayaMesh();
+	memcpy(meshRecieved, msg, sizeof(MayaMesh));
+	Node* node = _scene->findNode(meshRecieved->name);
+	_scene->removeNode(node);
+	
+	delete[] meshRecieved;
+	CreateMesh(msg);
+	
+}
+void Main::ColorUpdate(char *& msg)
+{
+	Color *myColor = new Color();
+
+	memcpy(myColor, msg, sizeof(Color));
+
+
+
+
+	delete myColor;
+}
 void Main::CreateMesh(char* &msg)
 {
     
 	vector<Vertex> vtxVector;
 	vector<Normal> NrmVector;
+	vector<UV> UVs;
+
 	size_t head = 0;
 	MayaMesh* meshRecieved = new MayaMesh();
 	memcpy(meshRecieved, msg, sizeof(MayaMesh));
@@ -155,8 +183,21 @@ void Main::CreateMesh(char* &msg)
 	}
 
 	head += sizeof(Normal)*meshRecieved->sizeOfNormals;
-	int arrayIt = meshRecieved->sizeOfVtxIndex * 6;
-	float* meshVertexData = new float[meshRecieved->sizeOfVtxIndex * 6];
+	float* meshVertexData = new float[meshRecieved->sizeOfVtxIndex * 8];
+
+	///////////////		UV DATA        \\\\\\\\\\\\\\\\\\
+
+	UV uv;
+	for (size_t i = 0; i < meshRecieved->sizeOfUV; i++)
+	{
+		memcpy(&uv, msg + head + sizeof(UV) * i, sizeof(UV));
+		UVs.push_back(uv);
+	}
+	head += sizeof(UV) * meshRecieved->sizeOfUV;
+
+	int* UvIndexArr = new int[meshRecieved->sizeOfUVIndex];
+	memcpy(UvIndexArr, msg + head, sizeof(int)*meshRecieved->sizeOfUVIndex);
+
     ///////////////     CREATE MESH   \\\\\\\\\\\\\\\\\\
 
 	size_t index = 0;
@@ -177,6 +218,12 @@ void Main::CreateMesh(char* &msg)
 		index++;
 		meshVertexData[index] = NrmVector[NrmIndexArr[i]].normal[2];
 		index++;
+
+		//UVs
+		meshVertexData[index] = UVs[UvIndexArr[i]].U;
+		index++;
+		meshVertexData[index] = UVs[UvIndexArr[i]].V;
+		index++;
 	}
 
 	int *indices = new int[meshRecieved->sizeOfVtxIndex];
@@ -188,9 +235,10 @@ void Main::CreateMesh(char* &msg)
 	VertexFormat::Element elements[] = {
 		VertexFormat::Element(VertexFormat::POSITION, 3),
 		VertexFormat::Element(VertexFormat::NORMAL, 3),
+		VertexFormat::Element(VertexFormat::TEXCOORD0, 2)
 	};
 
-	Mesh* newMesh = Mesh::createMesh(VertexFormat(elements, 2), meshRecieved->sizeOfVtxIndex, false);
+	Mesh* newMesh = Mesh::createMesh(VertexFormat(elements, 3), meshRecieved->sizeOfVtxIndex, false);
 	if (newMesh == NULL)
 	{
 		GP_ERROR("Failed to create mesh");
@@ -200,6 +248,7 @@ void Main::CreateMesh(char* &msg)
 	newMesh->setVertexData(meshVertexData, 0, meshRecieved->sizeOfVtxIndex);
 	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX32, meshRecieved->sizeOfVtxIndex);
     meshPart->setIndexData(indices, 0, meshRecieved->sizeOfVtxIndex);
+	
 	
     Model* models[10];
 	Material *mats[10];
@@ -213,13 +262,17 @@ void Main::CreateMesh(char* &msg)
     models[0] = Model::create(newMesh);
 	mats[0] = models[0]->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
 	mats[0] = models[0]->setMaterial("res/demo.material#lambert2");
+
 	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-
+	mats[0]->getParameter("u_diffuseColor")->setValue(Vector4(0.5, 0.2, 0.6, 1.0));
 	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.1f, 0.4f));
 	mats[0]->getStateBlock()->setCullFace(true);
 	mats[0]->getStateBlock()->setDepthTest(true);
 	mats[0]->getStateBlock()->setDepthWrite(true);
+
+	myModels[myModelIndex] = models[0];
+	myModelIndex++;
 	
     char nodeName[75] = {};
     sprintf(nodeName, meshRecieved->name);
@@ -231,8 +284,6 @@ void Main::CreateMesh(char* &msg)
 	container.meshes.push_back(newMesh);
 	container.models.push_back(Model::create(newMesh));
 	container.name.push_back(nodeName);
-	
-
 
 	node->setDrawable(models[0]);
 	SAFE_RELEASE(models[0]);
@@ -241,6 +292,10 @@ void Main::CreateMesh(char* &msg)
 	delete[] vtxIndexArr;
 	delete[] meshVertexData;
 	delete[] meshRecieved;
+	delete[] UvIndexArr;
+	vtxVector.clear();
+	NrmVector.clear();
+	UVs.clear();
 }
 
 void Main::unPack()
@@ -266,13 +321,16 @@ void Main::unPack()
 		CreateMesh(Package);		
 		break;
 	case (int)MsgType::VERTEX_TRANSLATION:
-		//	Another Type
+		UpdateMeshData(Package);
 		break;
 	case (int)MsgType::TRANSFORM_NODE_TRANSFORM:
 		TransformChanged(Package);
 		break;
 	case(int)MsgType::CAMERA_UPDATE:
 		CameraUpdated(Package);
+		break;
+	case(int)MsgType::COLOR_UPDATE:
+		ColorUpdate(Package);
 		break;
 	default:
 		break;

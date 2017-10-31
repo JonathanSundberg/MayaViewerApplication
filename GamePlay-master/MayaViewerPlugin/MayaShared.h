@@ -8,7 +8,8 @@ enum class MsgType
 
 	VERTEX_TRANSLATION,
 	TRANSFORM_NODE_TRANSFORM,
-	CAMERA_UPDATE
+	CAMERA_UPDATE,
+	COLOR_UPDATE
 
 };
 
@@ -47,6 +48,9 @@ struct Scaling
 struct Vertex {
 	float position[3];
 };
+struct UV {
+	float U, V;
+};
 struct Normal
 {
 	float normal[3];
@@ -57,7 +61,11 @@ struct MayaMesh {
 	int sizeOfVertices;
 	int sizeOfNormalIndex;
 	int sizeOfNormals;
+	int sizeOfUV;
+	int sizeOfUVIndex;
+	float color[4];
 	char name[75];
+	char materialName[75];
 };
 
 struct MCamera {
@@ -70,4 +78,12 @@ struct MCamera {
 	float nearPlane;
 	bool isOrtho;
 	char name[75];
+};
+
+struct Color
+{
+	MsgType headerType;
+	float colors[3];
+	char meshName[75];
+	char matName[75];
 };

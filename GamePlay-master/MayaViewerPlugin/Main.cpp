@@ -13,6 +13,8 @@ ComlibMaya* Comlib;
 char *Message;
 
 size_t length;
+string GetMeshMat(MFnMesh Mesh, MColor& meshColor);
+void recursiveTransform(MFnDagNode& Parent, bool cameraTransform);
 void timerCallback(float elapsedTime, float lastTime, void* clientData)
 {
 	MString msg("Elapsed time: ");
@@ -114,7 +116,6 @@ void CameraViewCallback(const MString &str, void* clientData)
 		}
 	}
 }
-
 void findCamera()
 {
 	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
@@ -141,6 +142,7 @@ void findCamera()
 	}
 
 }
+
 MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
 {
     MIntArray localIndex;
@@ -165,6 +167,7 @@ MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
     }
     return localIndex;
 }
+
 void meshChanged(MObject & node, void* clientData)
 {
 
@@ -175,6 +178,7 @@ void meshChanged(MObject & node, void* clientData)
 	MGlobal::displayInfo(msg);
 
 }
+
 void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 	MStatus status;
@@ -182,10 +186,15 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 
 	if (status == MS::kSuccess)
 	{
+		MColor meshColor;
+		string materialName = GetMeshMat(plug.node(), meshColor);
+
 		vector<int> normalIndices;
 		vector<Normal> meshNormals;
 		vector<int> vtxIndices;
 		vector<Vertex> vertices;
+		vector<int> UVIndex;
+		vector<UV> UVs;
 
 		MIntArray meshTris;
 		MIntArray meshTriVerts;
@@ -208,7 +217,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 			MPointArray triPoints;
 			MIntArray vtxTriIdx;
 			meshIterator.numTriangles(triCount);
-			meshIterator.getTriangles(triPoints, vtxTriIdx);//Triangle vertices and vertex indices
+			meshIterator.getTriangles(triPoints, vtxTriIdx, MSpace::kObject);//Triangle vertices and vertex indices
 			int triLength = vtxTriIdx.length();
          //   cerr << "Number of vertices in face: " << triPoints.length() << endl;
 			Vertex vertex;
@@ -225,7 +234,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 				//delete[] faceVertexIndex;
 			}
 
-			if (triCount > 1)
+			if (triCount >= 1)
 			{	
                 MIntArray *localIndex = new MIntArray[triCount];
 
@@ -256,40 +265,49 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 
                     for (size_t i = 0; i < 3; i++)//loops through every vertex in the triangle
                     { 
-                        int currentIndex = -1;
-                       currentIndex = meshIterator.normalIndex(localIndexArray[i]);
-               //        cerr << "Current normal index " << currentIndex << endl;
-                       normalIndices.push_back(currentIndex);
+						UV currentUV;
+						float2 UVss;
+						int uvIndex;
+						meshIterator.getUV(localIndexArray[i], UVss);
+						meshIterator.getUVIndex(localIndexArray[i], uvIndex);
+
+						int currentIndex = -1;
+						currentIndex = meshIterator.normalIndex(localIndexArray[i]);
+						//        cerr << "Current normal index " << currentIndex << endl;
+						currentUV.U = UVss[0];
+						currentUV.V = UVss[1];
+						normalIndices.push_back(currentIndex);
+						UVIndex.push_back(uvIndex);
+						UVs.push_back(currentUV);
                     }
 				}
 				delete[] localIndex;
 				delete[] faceTriangle;
 			}
-			if (triCount == 1)
-			{
-                MIntArray localIndex;
-                MIntArray faceTriangle;
-                faceTriangle.setLength(3);
-                faceTriangle[0] = vtxTriIdx[0];
-                faceTriangle[1] = vtxTriIdx[1];
-                faceTriangle[2] = vtxTriIdx[2];
+			//if (triCount == 1)
+			//{
+   //             MIntArray localIndex;
+   //             MIntArray faceTriangle;
+   //             faceTriangle.setLength(3);
+   //             faceTriangle[0] = vtxTriIdx[0];
+   //             faceTriangle[1] = vtxTriIdx[1];
+   //             faceTriangle[2] = vtxTriIdx[2];
 
-                localIndex = GetLocalIndex(polyVertexIndex, faceTriangle);
-				int localIndexArray[100]; //new int[localIndex.length()];
-                localIndex.get(localIndexArray);
+   //             localIndex = GetLocalIndex(polyVertexIndex, faceTriangle);
+			//	int localIndexArray[100]; //new int[localIndex.length()];
+   //             localIndex.get(localIndexArray);
 
-                for (size_t i = 0; i < 3; i++)//loops through each vertex in the triangle
-                {
-                    int currentIndex = -1;
-                    currentIndex = meshIterator.normalIndex(localIndexArray[i]);
-                    normalIndices.push_back(currentIndex);
-          //          cerr << "Current normal index: " << currentIndex << endl;
-                }
-              //  delete[] localIndexArray;
-			}
+   //             for (size_t i = 0; i < 3; i++)//loops through each vertex in the triangle
+   //             {
+   //                 int currentIndex = -1;
+   //                 currentIndex = meshIterator.normalIndex(localIndexArray[i]);
+   //                 normalIndices.push_back(currentIndex);
+   //       //          cerr << "Current normal index: " << currentIndex << endl;
+   //             }
+   //           //  delete[] localIndexArray;
+			//}
            
 		}
-
 		MayaMesh createdMesh;
 		createdMesh.headerType = MsgType::CREATE_MESH;
 		
@@ -303,7 +321,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		
 		//Getting vertex data
 		MFloatPointArray vtxArray;
-		newMesh.getPoints(vtxArray);
+		newMesh.getPoints(vtxArray, MSpace::kObject);
 		//cerr << "Vertex count: " << vtxArray.length() << endl;
 		for (size_t i = 0; i < vtxArray.length(); i++) 
 		{
@@ -318,7 +336,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 
 													  //Getting normal data
 		MFloatVectorArray normals;
-		newMesh.getNormals(normals);
+		newMesh.getNormals(normals, MSpace::kObject);
 		//cerr << "Size of normal arr: " << normals.length() << endl; 
 		for (size_t i = 0; i < normals.length(); i++)
 		{
@@ -333,6 +351,9 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		}
 		createdMesh.sizeOfNormals = meshNormals.size();
 		createdMesh.sizeOfNormalIndex = normalIndices.size();
+		createdMesh.sizeOfUV = UVs.size();
+		createdMesh.sizeOfUVIndex = UVIndex.size();
+		
 		//**** Send mesh to gameplay
 		//Header data
 		int floatSize = sizeof(float);
@@ -360,13 +381,29 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		memcpy(Message + head, meshNormals.data(), cpySize);
 		head += cpySize;
 
+		//UV data
+		cpySize = UVs.size() * sizeof(UV);
+		memcpy(Message + head, UVs.data(), cpySize);
+		head += cpySize;
+
+		cpySize = UVIndex.size() * sizeof(int);
+		memcpy(Message + head, UVIndex.data(), cpySize);
+		head += cpySize;
+
 		Comlib->send(Message, head);
+
+		//Sending the transformdata after vertex translation to stop it from snapping to origo
+		MObject tempObj(newMesh.object());
+		MFnDagNode TransformNodeMesh(tempObj);
+		//recursiveTransform(TransformNodeMesh, false);
 
 		//*******************************
 		vertices.clear();
 		vtxIndices.clear();
 		meshNormals.clear();
 		normalIndices.clear();
+		UVIndex.clear();
+		UVs.clear();
 		MMessage::removeCallback(meshCreatedId);//Removes the callback
 	/*	delete[] indexArray;*/
 
@@ -529,14 +566,341 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 	}
 }
 
+string GetMeshMat(MFnMesh Mesh,MColor& meshColor)
+{
+	MObjectArray Shaders;
+	MIntArray myInts;
 
+	Mesh.getConnectedShaders(0, Shaders, myInts);
+
+	for (size_t i = 0; i < Shaders.length(); i++)
+	{
+		MPlug plug;
+		MPlugArray connections;
+
+		MFnDependencyNode shaderGroup(Shaders[i]);
+
+		MString shaderName = shaderGroup.absoluteName();
+		MColor myColor;
+		MPlug shaderPlug = shaderGroup.findPlug("surfaceShader");
+
+		shaderPlug.connectedTo(connections, true, false);
+		for (size_t j = 0; j < connections.length(); j++)
+		{
+			
+			if (connections[j].node().hasFn(MFn::kLambert))
+			{
+				MFnLambertShader myLambert(connections[j].node());
+				MGlobal::displayInfo("Material name: ");
+				MGlobal::displayInfo(myLambert.name());
+				string name = myLambert.name().asChar();
+
+				meshColor = myLambert.color();
+				return name;
+			}
+		}
+	}
+}
+
+string GetMeshFromMat(MFnLambertShader myLambert)
+{
+	string name;
+	MPlugArray plugArray;
+	myLambert.getConnections(plugArray);
+
+	for (size_t j = 0; j < plugArray.length(); j++)		// outColor or Message
+	{
+		//MGlobal::displayInfo(plugArray[j].name());
+		MPlugArray connections;
+		plugArray[j].connectedTo(connections, true, true);
+		for (size_t i = 0; i < connections.length(); i++)
+		{
+			//MGlobal::displayInfo(connections[i].name());
+			MFnDependencyNode myNode(connections[i].node());
+			MPlugArray secondArray;
+
+			myNode.getConnections(secondArray);
+			for (size_t l = 0; l < secondArray.length(); l++)
+			{
+				//MGlobal::displayInfo(secondArray[l].name());
+				MFnAttribute myAttr = secondArray[l].attribute();
+				MString attributeName = myAttr.name();
+				MGlobal::displayInfo(attributeName);
+				if (attributeName == "dagSetMembers")
+				{
+					MPlugArray finalArray;
+					MPlug myPlug = secondArray[l];
+					myPlug.connectedTo(finalArray, true, true);
+					for (size_t h = 0; h < finalArray.length(); h++)
+					{
+						MGlobal::displayInfo(finalArray[h].name());
+						MStatus status;
+						MFnMesh myMesh(finalArray[h].node(), &status);
+						if (status)
+						{
+							MGlobal::displayInfo(myMesh.name());
+							string name = myMesh.name().asChar();
+							return name;
+						}
+					}
+				}
+				for (size_t u = 0; u < secondArray.length(); u++)
+				{
+					MPlugArray thirdArray;
+					secondArray[u].connectedTo(thirdArray,true,true);
+				//	MGlobal::displayInfo(thirdArray[u].name());
+				}
+			}
+		
+			MPlugArray meshConnections;
+			secondArray[i].connectedTo(meshConnections, true, true);
+			for (size_t p = 0; p < meshConnections.length(); p++)
+			{
+				//MGlobal::displayInfo(meshConnections[p].name());
+			}
+		
+			//MGlobal::displayInfo(connections[i].name());
+			name = connections[i].name().asChar();
+		}
+	}
+
+	return name;
+}
+
+void updateMesh(MPlug &plug)
+{
+	MStatus status;
+	MFnMesh newMesh(plug.node(), &status);
+
+	if (status == MS::kSuccess)
+	{
+		MColor meshColor;
+		string materialName = GetMeshMat(plug.node(), meshColor);
+
+		vector<int> normalIndices;
+		vector<Normal> meshNormals;
+		vector<int> vtxIndices;
+		vector<Vertex> vertices;
+		vector<int> UVIndex;
+		vector<UV> UVs;
+
+		MIntArray meshTris;
+		MIntArray meshTriVerts;
+		newMesh.getTriangles(meshTris, meshTriVerts);
+		
+		MItMeshPolygon meshIterator(newMesh.object(), &status);
+		if (status == MS::kSuccess)
+		{
+			
+		}
+		int triCount = 0;
+
+		for (; !meshIterator.isDone(); meshIterator.next())
+		{
+			MIntArray polyVertexIndex;
+			meshIterator.getVertices(polyVertexIndex);//Polygon vertex indices
+
+			MPointArray triPoints;
+			MIntArray vtxTriIdx;
+			meshIterator.numTriangles(triCount);
+			meshIterator.getTriangles(triPoints, vtxTriIdx, MSpace::kObject);//Triangle vertices and vertex indices
+			int triLength = vtxTriIdx.length();
+			//   cerr << "Number of vertices in face: " << triPoints.length() << endl;
+			Vertex vertex;
+
+			if (vtxTriIdx.length() > 0)
+			{
+				int faceVertexIndex[1000];// = new int[vtxTriIdx.length()];
+				vtxTriIdx.get(faceVertexIndex);
+				for (size_t i = 0; i < vtxTriIdx.length(); i++)//loops through each vertex index
+				{
+					//		cerr << "Triangle face vertex index: " << faceVertexIndex[i] << endl;
+					vtxIndices.push_back(faceVertexIndex[i]);
+				}
+				//delete[] faceVertexIndex;
+			}
+
+			if (triCount >= 1)
+			{
+				MIntArray *localIndex = new MIntArray[triCount];
+
+				MIntArray *faceTriangle = new MIntArray[triCount];
+
+				for (size_t i = 0; i < triCount; i++)
+				{
+					faceTriangle[i].setLength(3);
+
+				}
+
+				int indexCount = 0;//Keep track of what index to store inside the faceTriangle array
+				for (size_t i = 0; i < triCount; i++)
+				{
+					faceTriangle[i][0] = vtxTriIdx[indexCount];
+					indexCount++;
+					faceTriangle[i][1] = vtxTriIdx[indexCount];
+					indexCount++;
+					faceTriangle[i][2] = vtxTriIdx[indexCount];
+				}
+				for (size_t i = 0; i < triCount; i++)//loops through each triangle in the current face
+				{
+					localIndex[i] = GetLocalIndex(polyVertexIndex, faceTriangle[i]);
+					//      cerr << "Local index length: " << localIndex[i].length() << endl;
+
+					int localIndexArray[1000];// = new int[localIndex[i].length()];
+					localIndex[i].get(localIndexArray);
+
+					for (size_t i = 0; i < 3; i++)//loops through every vertex in the triangle
+					{
+						UV currentUV;
+						float2 UVss;
+						int uvIndex;
+						meshIterator.getUV(localIndexArray[i], UVss);
+						meshIterator.getUVIndex(localIndexArray[i], uvIndex);
+						
+						int currentIndex = -1;
+						currentIndex = meshIterator.normalIndex(localIndexArray[i]);
+						//        cerr << "Current normal index " << currentIndex << endl;
+						currentUV.U = UVss[0];
+						currentUV.V = UVss[1];
+						normalIndices.push_back(currentIndex);
+						UVIndex.push_back(uvIndex);
+						UVs.push_back(currentUV);
+					}
+				}
+				delete[] localIndex;
+				delete[] faceTriangle;
+			}
+			//if (triCount == 1)
+			//{
+			//	MIntArray localIndex;
+			//	MIntArray faceTriangle;
+			//	faceTriangle.setLength(3);
+			//	faceTriangle[0] = vtxTriIdx[0];
+			//	faceTriangle[1] = vtxTriIdx[1];
+			//	faceTriangle[2] = vtxTriIdx[2];
+
+			//	localIndex = GetLocalIndex(polyVertexIndex, faceTriangle);
+			//	int localIndexArray[100]; //new int[localIndex.length()];
+			//	localIndex.get(localIndexArray);
+
+			//	for (size_t i = 0; i < 3; i++)//loops through each vertex in the triangle
+			//	{
+			//		UV currentUV;
+			//		float2 UVss;
+			//		unsigned int uvIndex;
+			//		meshIterator.getUV(localIndexArray[i], UVss);
+			//		
+			//		MGlobal::displayInfo("Nein");
+			//		int currentIndex = -1;
+			//		currentIndex = meshIterator.normalIndex(localIndexArray[i]);
+			//		normalIndices.push_back(currentIndex);
+			//		//          cerr << "Current normal index: " << currentIndex << endl;
+			//	}
+				//  delete[] localIndexArray;
+			//}
+
+		}
+		MayaMesh createdMesh;
+		createdMesh.headerType = MsgType::VERTEX_TRANSLATION;
+
+		createdMesh.sizeOfVtxIndex = vtxIndices.size();
+
+		//Getting name for the transform node
+
+		string meshName = newMesh.name().asChar();
+		strncpy(createdMesh.name, meshName.c_str(), sizeof(createdMesh.name));
+		createdMesh.name[sizeof(createdMesh.name) - 1] = 0;
+
+		//Getting vertex data
+		MFloatPointArray vtxArray;
+		newMesh.getPoints(vtxArray, MSpace::kObject);
+		//cerr << "Vertex count: " << vtxArray.length() << endl;
+		for (size_t i = 0; i < vtxArray.length(); i++)
+		{
+			Vertex vtx;
+			vtx.position[0] = vtxArray[i].x;
+			vtx.position[1] = vtxArray[i].y;
+			vtx.position[2] = vtxArray[i].z;
+			vertices.push_back(vtx);
+			//		cerr << "Vtx: [" << i << "] X: " << vtx.position[0] << " Y: " << vtx.position[1] << " Z: " << vtx.position[2] << endl;	
+		}
+		createdMesh.sizeOfVertices = vertices.size(); // getting the size of the vertices vector and storing it in sizeOfVertices to be able to read vector in comlib
+
+													  //Getting normal data
+		MFloatVectorArray normals;
+		newMesh.getNormals(normals, MSpace::kObject);
+		//cerr << "Size of normal arr: " << normals.length() << endl; 
+		for (size_t i = 0; i < normals.length(); i++)
+		{
+			Normal meshNormal;
+			float arr[3];
+			normals[i].get(arr);
+			//			cerr << "Normals: X: " << arr[0] << " Y: " << arr[1] << " Z: " << arr[2] << endl;
+			meshNormal.normal[0] = arr[0];
+			meshNormal.normal[1] = arr[1];
+			meshNormal.normal[2] = arr[2];
+			meshNormals.push_back(meshNormal);
+		}
+
+		createdMesh.sizeOfNormals = meshNormals.size();
+		createdMesh.sizeOfNormalIndex = normalIndices.size();
+		createdMesh.sizeOfUV = UVs.size();
+		createdMesh.sizeOfUVIndex = UVIndex.size();
+		createdMesh.color[0] = meshColor.r;
+		createdMesh.color[1] = meshColor.g;
+		createdMesh.color[2] = meshColor.b;
+		createdMesh.color[3] = meshColor.a;
+
+		//**** Send mesh to gameplay
+		//Header data
+		int floatSize = sizeof(float);
+		size_t cpySize = 0;
+		size_t head = 0;
+		cpySize = sizeof(createdMesh);
+		memcpy(Message, &createdMesh, cpySize);
+		head += cpySize;
+
+		//Vertex data
+		cpySize = (sizeof(int) * vtxIndices.size());
+		memcpy(Message + head, vtxIndices.data(), cpySize);
+		head += cpySize;
+
+		cpySize = (sizeof(Vertex) * vertices.size());
+		memcpy(Message + head, vertices.data(), cpySize);
+		head += cpySize;
+
+		//Normal data
+		cpySize = normalIndices.size() * sizeof(int);
+		memcpy(Message + head, normalIndices.data(), cpySize);
+		head += cpySize;
+
+		cpySize = meshNormals.size() * sizeof(Normal);
+		memcpy(Message + head, meshNormals.data(), cpySize);
+		head += cpySize;
+
+		//UV data
+		cpySize = UVs.size() * sizeof(UV);
+		memcpy(Message + head, UVs.data(), cpySize);
+		head += cpySize;
+
+		cpySize = UVIndex.size() * sizeof(int);
+		memcpy(Message + head, UVIndex.data(), cpySize);
+		head += cpySize;
+
+		Comlib->send(Message, head);
+
+		//*******************************
+		vertices.clear();
+		vtxIndices.clear();
+		meshNormals.clear();
+		normalIndices.clear();
+		UVIndex.clear();
+		UVs.clear();
+	}
+}
 
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
-
-
-
-
 
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
@@ -549,8 +913,23 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			MGlobal::displayInfo("Material attribute changed");
 			MGlobal::displayInfo(plug.node().apiTypeStr());*/
 			MFnLambertShader MyLambert(plug.node());
-
+			string meshName = GetMeshFromMat(plug.node());
 			//MGlobal::displayInfo(MyLambert.absoluteName());
+
+			MPlugArray myArrray;
+			MyLambert.getConnections(myArrray);
+		/*	for (size_t i = 0; i < myArrray.length(); i++)
+			{
+				MGlobal::displayInfo(myArrray[i].name());
+			}
+			MGlobal::displayInfo(myArrray[1].node().apiTypeStr());*/
+			MFnLambertShader anotherOne(myArrray[1].node());
+			anotherOne.getConnections(myArrray);
+			for (size_t i = 0; i < myArrray.length(); i++)
+			{
+				MGlobal::displayInfo(myArrray[i].name());
+			}
+			MGlobal::displayInfo(myArrray[1].node().apiTypeStr());
 
 			MColor transp = MyLambert.transparency();
 			MColor incan = MyLambert.incandescence();
@@ -562,7 +941,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			MPlug outColorPlug;
 			myPlug.connectedTo(myPlugs, true, false);
 
-			if (myPlugs.length()>0)
+			if (myPlugs.length() > 0)
 			{
 
 				for (size_t i = 0; i < myPlugs.length(); i++)
@@ -581,6 +960,34 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				//MGlobal::displayInfo("Texture name: ");
 			//	MGlobal::displayInfo(texturename);
 			}
+			else
+			{
+				Color* newColor = new Color();
+				newColor->headerType == MsgType::COLOR_UPDATE;
+				 newColor->colors[0] = myColor.r;
+				 newColor->colors[1] = myColor.g;
+				 newColor->colors[2] = myColor.b;
+				 
+				 strncpy(newColor->meshName, meshName.c_str(), sizeof(newColor->meshName));
+				 newColor->meshName[sizeof(newColor->meshName) - 1] = 0;
+				 string matName = MyLambert.name().asChar();
+				 strncpy(newColor->matName, matName.c_str(), sizeof(newColor->matName));
+				 newColor->matName[sizeof(newColor->matName) - 1] = 0;
+
+				 memcpy(Message, newColor, sizeof(Color));
+
+				 while (true)
+				 {
+					 if (Comlib->send(Message,sizeof(Color)))
+					 {
+						 break;
+					 }
+				 }
+
+
+			}
+
+
 
 			/*print += myColor.r;
 			print += " ";
@@ -661,112 +1068,15 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		/////////////////	MESH	///////////////////
 		else if (plug.node().apiType() == MFn::Type::kMesh)
 		{
+		
+			
 			MFnAttribute myAttr = plug.attribute();
 			MString attributeName = myAttr.name();
 
 			if (attributeName == "pnts")
 			{
+				updateMesh(plug);
 				MFnMesh myMesh(plug.node(), &status);
-
-				//MObjectArray Shaders;
-				//MIntArray myInts;
-				//myMesh.getConnectedShaders(0, Shaders, myInts);
-				//for (size_t i = 0; i < Shaders.length(); i++)
-				//{
-				//	MPlug plug;
-				//	MPlugArray connections;
-				//	MFnDependencyNode shaderGroup(Shaders[i]);
-				//	MString shaderName = shaderGroup.absoluteName();
-				//	MColor myColor;
-				//	MPlug shaderPlug = shaderGroup.findPlug("surfaceShader");
-				//	
-				//	shaderPlug.connectedTo(connections, true, false);
-				//	
-				//	for (size_t l = 0; l < connections.length(); l++)
-				//	{
-				//		MGlobal::displayInfo(connections[l].name());
-				//		if (connections[l].node().hasFn(MFn::kLambert))
-				//		{
-				//			MGlobal::displayInfo("Lambert");
-				//			MFnLambertShader lambShader(connections[l].node());
-				//			
-				//			MColor transp = lambShader.transparency();
-				//			MColor incan = lambShader.incandescence();
-				//			MColor diffuse = lambShader.diffuseCoeff(); // ??
-				//			myColor = lambShader.color();
-				//			MString print;
-				//			print += myColor.r;
-				//			print += " ";
-				//			print += myColor.g;
-				//			print += " ";
-				//			print += myColor.b;
-				//			print += " ";
-				//			print += myColor.a;
-				//			
-				//			MGlobal::displayInfo(print);
-				//			MPlugArray colorPlug;
-				//			lambShader.findPlug("color").connectedTo(colorPlug, true, false);
-				//			
-				//			for (size_t p = 0; p < colorPlug.length(); p++)
-				//			{
-				//				MGlobal::displayInfo("Texture: ");
-				//				MGlobal::displayInfo(colorPlug[p].name());
-				//				
-				//			}
-				//
-				//		}
-				//		
-				//		
-				//	}
-				//
-				//	MObject material;
-				//	MStatus check;
-				//
-				//	MString color("color");
-				//
-				//	MFnDependencyNode fnDependNode(material);
-				//
-				//	MPlug myPlug = fnDependNode.findPlug(color,check);
-				//	if (check == MS::kSuccess)
-				//	{
-				//		MString print("myPlug: ");
-				//		print += myPlug.name();
-				//		MGlobal::displayInfo(print);
-				//
-				//		MPlugArray cc;
-				//		plug.connectedTo(cc, true, false);
-				//
-				//		if (cc.length() > 0)
-				//		{
-				//			MGlobal::displayInfo(cc[0].name());
-				//			MObject src = cc[0];
-				//			if (src.hasFn(MFn::kFileTexture))
-				//			{
-				//				MFnDependencyNode fnFile(src);
-				//
-				//			}
-				//		}
-				//
-				//	}
-				//
-				//
-				//	
-				//
-				//	for (size_t j = 0; j < connections.length(); j++)
-				//	{
-				//		if (connections[j].node().hasFn(MFn::kLambert))
-				//		{
-				//			MPlugArray plugs;
-				//			MFnLambertShader lamberShader(connections[j].node());
-				//			lamberShader.findPlug("color").connectedTo(plugs, true, false);
-				//
-				//			for (size_t u = 0; u < plugs.length(); u++)
-				//			{
-				//				MGlobal::displayInfo(plugs[u].name());
-				//			}
-				//		}
-				//	}
-				//}
 
 				if (status)
 				{

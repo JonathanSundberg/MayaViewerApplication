@@ -84,8 +84,12 @@ private:
 	/*
 	* Expands the mesh container if the number of meshes exceeds the current capacity
 	*/
+	/*
+	* Updates the mesh's vertes positions(deletes a mesh and then creates a new one with the updated values)
+	*/
+	void UpdateMeshData(char* &msg);
 	
-	
+	void ColorUpdate(char * &msg);
 
 
 	//MeshContainer meshContainer;
