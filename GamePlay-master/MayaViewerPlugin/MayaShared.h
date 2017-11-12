@@ -76,6 +76,7 @@ struct MCamera {
 	float FOV;
 	float farPlane;
 	float nearPlane;
+	float zoom;
 	bool isOrtho;
 	char name[75];
 };

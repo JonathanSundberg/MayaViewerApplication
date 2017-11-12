@@ -79,25 +79,69 @@ unsigned int findMesh(string meshName)
 }
 void Main::CameraUpdated(char* &msg)
 {
+
+	
 	MCamera* mCam = new MCamera();
 	memcpy(mCam, msg, sizeof(MCamera));
 
+	Node* find = _scene->findNode(mCam->name);
 	Vector3 translateVec(mCam->fViewMatrix[3][0], mCam->fViewMatrix[3][1], mCam->fViewMatrix[3][2]);
-	_scene->getActiveCamera()->getNode()->setTranslation(translateVec);
-	_scene->getActiveCamera()->getNode()->setRotation(mCam->Rot[0], mCam->Rot[1], mCam->Rot[2], mCam->Rot[3]);
-	_scene->getActiveCamera()->setAspectRatio(mCam->aspectRatio);
-	_scene->getActiveCamera()->setFieldOfView(mCam->FOV);
+	if (find == NULL)
+	{
+		if (mCam->isOrtho)
+		{
+			Camera* newCam = Camera::createOrthographic(20, 20, mCam->aspectRatio, mCam->nearPlane, mCam->farPlane);
+			Node* orthoCam = _scene->addNode(mCam->name);
+			orthoCam->setCamera(newCam);
+			_scene->setActiveCamera(newCam);
+
+
+		}
+		else
+		{
+			Camera* newCam = Camera::createPerspective(mCam->FOV, mCam->aspectRatio, mCam->nearPlane, mCam->farPlane);
+			Node* perpCam = _scene->addNode(mCam->name);
+			perpCam->setCamera(newCam);
+			_scene->setActiveCamera(newCam);
+		}
+	}
+	else
+	{
+		if (mCam->isOrtho)
+		{
+			_scene->findNode(mCam->name)->setTranslation(translateVec);
+			_scene->findNode(mCam->name)->setRotation(mCam->Rot[0], mCam->Rot[1], mCam->Rot[2], mCam->Rot[3]);
+			/*_scene->findNode(mCam->name)->getCamera()->setZoomX(mCam->zoom);
+			_scene->findNode(mCam->name)->getCamera()->setZoomY(mCam->zoom);*/
+			_scene->setActiveCamera(_scene->findNode(mCam->name)->getCamera());
+		}
+		else
+		{
+			_scene->findNode(mCam->name)->setTranslation(translateVec);
+			_scene->findNode(mCam->name)->setRotation(mCam->Rot[0], mCam->Rot[1], mCam->Rot[2], mCam->Rot[3]);
+			_scene->findNode(mCam->name)->getCamera()->setAspectRatio(mCam->aspectRatio);
+			_scene->findNode(mCam->name)->getCamera()->setFieldOfView(mCam->FOV);
+			_scene->setActiveCamera(_scene->findNode(mCam->name)->getCamera());
+		}
+	}
+
+	
 
 	delete[] mCam;
 }
 void Main::TransformChanged(char* &msg)
 {
+
 	TransformData *transformData = new TransformData();
 	memcpy(transformData, msg, sizeof(TransformData));
+	if (transformData->name == "topShape" || transformData->name == "sideShape" || transformData->name == "frontShape")
+	{
+		return;
+	}
 
 	Vector3 transVec(transformData->Tx, transformData->Ty, transformData->Tz);
-	_scene->findNode(transformData->name)->setTranslation(transVec);
-	_scene->findNode(transformData->name)->setRotation(transformData->Rx, transformData->Ry, transformData->Rz, transformData->Rw);
+	_scene->findNode(transformData->name)->setTranslation(transVec); 
+ 	_scene->findNode(transformData->name)->setRotation(transformData->Rx, transformData->Ry, transformData->Rz, transformData->Rw);
 	_scene->findNode(transformData->name)->setScale(transformData->Sx, transformData->Sy, transformData->Sz);
 	unsigned int index = findMesh(transformData->name);
 	

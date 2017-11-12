@@ -33,11 +33,11 @@ void CameraViewCallback(const MString &str, void* clientData)
 
 	MStatus status = MS::kSuccess;
 
-	status = M3dView::getM3dViewFromModelPanel(str, view);
+   	status = M3dView::getM3dViewFromModelPanel(str, view);
 	if (status == MS::kSuccess)
 	{
 		MMatrix viewMatrix;
-		MMatrix cameraPos;
+ 		MMatrix cameraPos;
 		MDagPath camera;
 		MString msg;
 		view.modelViewMatrix(viewMatrix);
@@ -94,9 +94,13 @@ void CameraViewCallback(const MString &str, void* clientData)
 		myCamera.isOrtho = MyCam.isOrtho();
 		myCamera.farPlane = (float)MyCam.farClippingPlane();
 		myCamera.nearPlane = (float)MyCam.nearClippingPlane();
+		myCamera.zoom = (float)MyCam.zoom();
 
-
-		string CamName = "camera";
+		string CamName = "";
+		if (myCamera.isOrtho)
+			CamName = "cameraO";
+		else
+			CamName = "cameraP";
 		//string CamName = MyCam.name().asChar();
 		strncpy(myCamera.name, CamName.c_str(), sizeof(myCamera.name));
 		myCamera.name[sizeof(myCamera.name) - 1] = 0;
@@ -440,6 +444,10 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 
 void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 {
+	if (Parent.child(0).apiType() == MFn::kCamera)
+	{
+		return;
+	}
 	MStatus status;
 	//MGlobal::displayInfo("Entered rekursive transform");
 
@@ -452,6 +460,7 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 
 	for (size_t i = 0; i < Parent.childCount(); i++)
 	{
+		
 		if (Parent.child(i).apiType() == MFn::Type::kTransform)
 		{
 			MFnDagNode childDag = Parent.child(i);
@@ -888,7 +897,7 @@ void updateMesh(MPlug &plug)
 		head += cpySize;
 
 		Comlib->send(Message, head);
-
+		
 		//*******************************
 		vertices.clear();
 		vtxIndices.clear();
@@ -1077,6 +1086,9 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			{
 				updateMesh(plug);
 				MFnMesh myMesh(plug.node(), &status);
+				MFnDagNode dagNode = myMesh.parent(0);
+				recursiveTransform(dagNode, false);
+				
 
 				if (status)
 				{
@@ -1248,7 +1260,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 		}
 	}
 
-	MCallbackId CameraviewID = MUiMessage::add3dViewPostRenderMsgCallback(
+	MCallbackId CameraviewID1 = MUiMessage::add3dViewPostRenderMsgCallback(
 		"modelPanel4",
 		CameraViewCallback,
 		NULL,
@@ -1256,11 +1268,54 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	if (status == MS::kSuccess)
 	{
-		if (myCallbackArray.append(CameraviewID) == MS::kSuccess)
+		if (myCallbackArray.append(CameraviewID1) == MS::kSuccess)
 		{
 			MGlobal::displayInfo("Camera changed CALLBAAACK!!");
 		}
 	}
+
+	MCallbackId CameraviewID2 = MUiMessage::add3dViewPostRenderMsgCallback(
+		"modelPanel1",
+		CameraViewCallback,
+		NULL,
+		&status);
+
+	if (status == MS::kSuccess)
+	{
+		if (myCallbackArray.append(CameraviewID2) == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Camera changed CALLBAAACK!!");
+		}
+	}
+
+	MCallbackId CameraviewID3 = MUiMessage::add3dViewPostRenderMsgCallback(
+		"modelPanel2",
+		CameraViewCallback,
+		NULL,
+		&status);
+
+	if (status == MS::kSuccess)
+	{
+		if (myCallbackArray.append(CameraviewID3) == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Camera changed CALLBAAACK!!");
+		}
+	}
+
+	MCallbackId CameraviewID4 = MUiMessage::add3dViewPostRenderMsgCallback(
+		"modelPanel3",
+		CameraViewCallback,
+		NULL,
+		&status);
+
+	if (status == MS::kSuccess)
+	{
+		if (myCallbackArray.append(CameraviewID4) == MS::kSuccess)
+		{
+			MGlobal::displayInfo("Camera changed CALLBAAACK!!");
+		}
+	}
+	
 	//MStringArray eventNames;
 	//MEventMessage::getEventNames(eventNames);
 	//for (size_t i = 0; i < eventNames.length(); i++)
