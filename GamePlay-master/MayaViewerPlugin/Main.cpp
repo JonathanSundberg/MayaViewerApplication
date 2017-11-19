@@ -922,12 +922,25 @@ void updateMesh(MPlug &plug)
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 
-	MGlobal::displayInfo(plug.node().apiTypeStr());
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
+
+		
+		if (plug.node().apiType() == MFn::Type::kFileTexture)
+		{
+			MGlobal::displayInfo(plug.name());
+			
+			MGlobal::displayInfo(plug.info());
+			MString value;
+			plug.getValue(value);
+
+			MGlobal::displayInfo(value);
+			
+		}
 		/////////////////	MATERIAL	///////////////////
 		if (plug.node().hasFn(MFn::kLambert))
 		{
+			
 			MStatus status;
 			/*MGlobal::displayInfo(plug.name());
 			MGlobal::displayInfo("Material attribute changed");
