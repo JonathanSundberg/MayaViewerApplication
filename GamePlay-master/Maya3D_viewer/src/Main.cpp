@@ -14,10 +14,9 @@ struct MeshContainer
 {
 	vector<Model*> models;
 	vector<Mesh*> meshes;
+	vector<Material*> materials;
 	vector<string> name;
-	
-	vector<float*> vertexBuffer;
-
+	vector<string> matName;
 };
 
 Model** myModels = new Model*[1000];
@@ -26,7 +25,7 @@ int myModelIndex = 0;
 Main game;
 Comlib* Receiver;
 MeshContainer container;
-MeshData* meshData;
+
 
 Main::Main()
     : _scene(NULL), _wireframe(false)
@@ -60,9 +59,6 @@ void Main::initialize()
 	camNode->setTranslation(0, 0, 10);
 	SAFE_RELEASE(cam);
 
-	//Initializing container that stores all the meshes
-	containerSize = 10;
-	meshData = new MeshData[containerSize];
 
     Receiver = new Comlib(BUFFERSIZE);
 }
@@ -141,7 +137,7 @@ void Main::TransformChanged(char* &msg)
 
 	Vector3 transVec(transformData->Tx, transformData->Ty, transformData->Tz);
 	_scene->findNode(transformData->name)->setTranslation(transVec); 
- 	_scene->findNode(transformData->name)->setRotation(transformData->Rx, transformData->Ry, transformData->Rz, transformData->Rw);
+	_scene->findNode(transformData->name)->setRotation(transformData->Rx, transformData->Ry, transformData->Rz, transformData->Rw);
 	_scene->findNode(transformData->name)->setScale(transformData->Sx, transformData->Sy, transformData->Sz);
 	unsigned int index = findMesh(transformData->name);
 	
@@ -167,8 +163,15 @@ void Main::ColorUpdate(char *& msg)
 	Color *myColor = new Color();
 
 	memcpy(myColor, msg, sizeof(Color));
-
-
+	string tempMat = myColor->matName;
+	for (size_t i = 0; i < container.matName.size(); i++)
+	{
+		if (container.matName[i] == tempMat)
+		{
+			container.materials[i]->getParameter("u_diffuseColor")->setValue(Vector4(myColor->colors[0], myColor->colors[1], myColor->colors[2], 1.0f));
+		
+		}
+	}
 
 
 	delete myColor;
@@ -184,7 +187,7 @@ void Main::CreateMesh(char* &msg)
 	MayaMesh* meshRecieved = new MayaMesh();
 	memcpy(meshRecieved, msg, sizeof(MayaMesh));
 	head += sizeof(MayaMesh);
-
+	container.matName.push_back(meshRecieved->materialName);
 
     ///////////////     VERTEX INDEX    \\\\\\\\\\\\\\\\\\
 
@@ -328,6 +331,7 @@ void Main::CreateMesh(char* &msg)
 	container.meshes.push_back(newMesh);
 	container.models.push_back(Model::create(newMesh));
 	container.name.push_back(nodeName);
+	container.materials.push_back(mats[0]);
 
 	node->setDrawable(models[0]);
 	SAFE_RELEASE(models[0]);
@@ -353,10 +357,10 @@ void Main::unPack()
 	{
 		memcpy(&Type, Package, sizeof(int));
 
+		int a = Type;
 	}
 	
 	
-
 	switch (Type)
 	{
 

@@ -357,6 +357,8 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		createdMesh.sizeOfNormalIndex = normalIndices.size();
 		createdMesh.sizeOfUV = UVs.size();
 		createdMesh.sizeOfUVIndex = UVIndex.size();
+		strncpy(createdMesh.materialName, materialName.c_str(), sizeof(createdMesh.materialName));
+		createdMesh.materialName[sizeof(createdMesh.materialName) - 1] = 0;
 		
 		//**** Send mesh to gameplay
 		//Header data
@@ -634,7 +636,7 @@ string GetMeshFromMat(MFnLambertShader myLambert)
 				//MGlobal::displayInfo(secondArray[l].name());
 				MFnAttribute myAttr = secondArray[l].attribute();
 				MString attributeName = myAttr.name();
-				MGlobal::displayInfo(attributeName);
+				//MGlobal::displayInfo(attributeName);
 				if (attributeName == "dagSetMembers")
 				{
 					MPlugArray finalArray;
@@ -642,12 +644,12 @@ string GetMeshFromMat(MFnLambertShader myLambert)
 					myPlug.connectedTo(finalArray, true, true);
 					for (size_t h = 0; h < finalArray.length(); h++)
 					{
-						MGlobal::displayInfo(finalArray[h].name());
+						//MGlobal::displayInfo(finalArray[h].name());
 						MStatus status;
 						MFnMesh myMesh(finalArray[h].node(), &status);
 						if (status)
 						{
-							MGlobal::displayInfo(myMesh.name());
+							//MGlobal::displayInfo(myMesh.name());
 							string name = myMesh.name().asChar();
 							return name;
 						}
@@ -859,6 +861,8 @@ void updateMesh(MPlug &plug)
 		createdMesh.color[1] = meshColor.g;
 		createdMesh.color[2] = meshColor.b;
 		createdMesh.color[3] = meshColor.a;
+		strncpy(createdMesh.materialName, materialName.c_str(), sizeof(createdMesh.materialName));
+		createdMesh.materialName[sizeof(createdMesh.materialName) - 1] = 0;
 
 		//**** Send mesh to gameplay
 		//Header data
@@ -896,7 +900,14 @@ void updateMesh(MPlug &plug)
 		memcpy(Message + head, UVIndex.data(), cpySize);
 		head += cpySize;
 
-		Comlib->send(Message, head);
+		while (true)
+		{
+			if (Comlib->send(Message, head))
+			{
+				break;
+			}
+		}
+		
 		
 		//*******************************
 		vertices.clear();
@@ -911,9 +922,9 @@ void updateMesh(MPlug &plug)
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 
+	MGlobal::displayInfo(plug.node().apiTypeStr());
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
-
 		/////////////////	MATERIAL	///////////////////
 		if (plug.node().hasFn(MFn::kLambert))
 		{
@@ -972,7 +983,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			else
 			{
 				Color* newColor = new Color();
-				newColor->headerType == MsgType::COLOR_UPDATE;
+				newColor->headerType = MsgType::COLOR_UPDATE;
 				 newColor->colors[0] = myColor.r;
 				 newColor->colors[1] = myColor.g;
 				 newColor->colors[2] = myColor.b;
