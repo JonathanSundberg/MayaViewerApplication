@@ -45,6 +45,13 @@ void Main::initialize()
     // Load game scene from file
     _scene = Scene::load("res/demo.scene");
 	
+	//Initialize light
+	Node* lightNode = _scene->addNode("Light");
+	Light* light = Light::createPoint(Vector3(0.9f, 0.9f, 0.9f), 30);
+	lightNode->setLight(light);
+	SAFE_RELEASE(light);
+	lightNode->translateUp(2.0f);
+
     // Get the box model and initialize its material parameter values and bindings
     Node* boxNode = _scene->findNode("box");
     Model* boxModel = dynamic_cast<Model*>(boxNode->getDrawable());
@@ -299,6 +306,7 @@ void Main::CreateMesh(char* &msg)
 	
     Model* models[10];
 	Material *mats[10];
+	Texture::Sampler* sampler;
 
 	Node* lightNode = _scene->addNode("light");
 	Light* light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
@@ -306,18 +314,22 @@ void Main::CreateMesh(char* &msg)
 	SAFE_RELEASE(light);
 	lightNode->translate(Vector3(0, 1, 5));
 
+	char* texturePath = "res/uvsnap.png";
     models[0] = Model::create(newMesh);
-	mats[0] = models[0]->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
-	mats[0] = models[0]->setMaterial("res/demo.material#lambert2");
-
+	mats[0] = models[0]->setMaterial("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.25f, 0.25f, 0.25f));
+	mats[0]->getParameter("u_pointLightColor[0]")->setValue(_scene->findNode("Light")->getLight()->getColor());
+	mats[0]->getParameter("u_pointLightPosition[0]")->bindValue(_scene->findNode("Light"), &Node::getTranslationWorld);
+	mats[0]->getParameter("u_pointLightRangeInverse[0]")->bindValue(_scene->findNode("Light")->getLight(), &Light::getRangeInverse);
 	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-	mats[0]->getParameter("u_diffuseColor")->setValue(Vector4(0.5, 0.2, 0.6, 1.0));
-	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.1f, 0.4f));
+	sampler = mats[0]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
+	
+	sampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+
 	mats[0]->getStateBlock()->setCullFace(true);
 	mats[0]->getStateBlock()->setDepthTest(true);
 	mats[0]->getStateBlock()->setDepthWrite(true);
-
 	myModels[myModelIndex] = models[0];
 	myModelIndex++;
 	
