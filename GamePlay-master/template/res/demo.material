@@ -17,6 +17,35 @@ material colored
         }
     }
 }
+material textured
+{
+	u_worldViewProjectionMatrix = WORLD_VIEW_PROJECTION_MATRIX
+	
+
+	technique
+	{
+		pass
+		{
+			vertexShader = res/shaders/textured.vert
+			fragmentShader = res/shaders/textured.frag
+			
+			sampler u_diffuseTexture
+            {
+                mipmap = true
+                wrapS = CLAMP
+                wrapT = CLAMP
+                minFilter = LINEAR_MIPMAP_LINEAR
+                magFilter = LINEAR
+            }
+			renderState
+			{
+				cullFace = true
+				depthTest = true
+			}		
+		}
+	}
+	
+}
 
 material lambert2 : colored
 {
@@ -31,8 +60,63 @@ material lambert2 : colored
     {
         pass 
         {
+		
             defines = DIRECTIONAL_LIGHT_COUNT 1
         }
     }
 }
+material lambert3 : textured
+{
+	technique
+	{
+		pass
+		{
+			sampler  u_diffuseTexture
+			{
+				path = @lambert3
+			}
+		}
+	}
+	
+}
+material texturedUnlit
+{
+    technique
+    {
+        pass
+        {
+            vertexShader = res/shaders/textured.vert
+            fragmentShader = res/shaders/textured.frag
 
+            u_worldViewProjectionMatrix = WORLD_VIEW_PROJECTION_MATRIX
+            
+            sampler u_diffuseTexture
+            {
+                mipmap = true
+                wrapS = CLAMP
+                wrapT = CLAMP
+                minFilter = LINEAR_MIPMAP_LINEAR
+                magFilter = LINEAR
+            }
+
+            renderState
+            {
+                cullFace = true
+                depthTest = true
+            }
+        }
+    }
+}
+material floortiles : texturedUnlit
+{
+    technique
+    {
+        pass
+        {
+            sampler u_diffuseTexture
+            {
+                path = @floortiles
+            }
+        }
+    }
+}
