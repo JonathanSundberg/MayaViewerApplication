@@ -46,9 +46,10 @@ void Main::initialize()
     _scene = Scene::load("res/demo.scene");
 	
     // Get the box model and initialize its material parameter values and bindings
-    Node* boxNode = _scene->findNode("box");
-    Model* boxModel = dynamic_cast<Model*>(boxNode->getDrawable());
-    Material* boxMaterial = boxModel->getMaterial();
+   Node* boxNode = _scene->findNode("box");
+   _scene->removeNode(boxNode);
+    //Model* boxModel = dynamic_cast<Model*>(boxNode->getDrawable());
+    //Material* boxMaterial = boxModel->getMaterial();
 
     // Set the aspect ratio for the scene's camera to match the current resolution
 	Camera* cam = Camera::createPerspective(45.0f, 1920 / 1080.0f, 0.1f, 100.0f);
@@ -400,7 +401,7 @@ void Main::update(float elapsedTime)
 
 	unPack();
     // Rotate model
-    _scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
+    //_scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
 
 	
 

@@ -4,6 +4,7 @@
 #include "MayaShared.h"
 #include <sstream>
 #include <assert.h>
+#include <time.h>
 using namespace std;
 
 MCallbackIdArray myCallbackArray;
@@ -13,13 +14,22 @@ ComlibMaya* Comlib;
 char *Message;
 
 size_t length;
+
+/*		ALL GLOBAL CONTAINERS AND BOOLS		*/	
+MCamera fpsLockCamera;
+MString camStr;
+clock_t camClock;
+bool sixtyFpscamera = false;
+
 string GetMeshMat(MFnMesh Mesh, MColor& meshColor);
 void recursiveTransform(MFnDagNode& Parent, bool cameraTransform);
-void timerCallback(float elapsedTime, float lastTime, void* clientData)
+void ThirtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
-	MString msg("Elapsed time: ");
-	msg += elapsedTime;
-	//	MGlobal::displayInfo(msg);
+	
+}
+void TenFpsLock(float elapsedTime, float lastTime, void* clientData)
+{
+
 }
 float calcAoV(float aperture, float fl)
 {
@@ -107,17 +117,33 @@ void CameraViewCallback(const MString &str, void* clientData)
 		
 		MVector rightVec = MyCam.rightDirection();
 	
-		size_t cpySize = 0;
-		cpySize = sizeof(myCamera);;
-		memcpy(Message, &myCamera, cpySize);	
 
-		while (true)
+		camStr = str;
+		fpsLockCamera = myCamera;
+		clock_t timer = clock() - camClock;
+	
+
+		if (timer >16.67)
 		{
-			if (Comlib->send(Message,sizeof(myCamera)))
+
+			size_t cpySize = 0;
+			cpySize = sizeof(myCamera);
+			memcpy(Message, &myCamera, cpySize);	
+
+			while (true)
 			{
-				break;
+				if (Comlib->send(Message,sizeof(myCamera)))
+				{
+					break;
+				}
 			}
+			camClock = clock();
 		}
+		
+		
+		
+		MGlobal::displayInfo("camera!");
+		
 	}
 }
 void findCamera()
@@ -145,6 +171,11 @@ void findCamera()
 		}
 	}
 
+}
+
+void SixtyFpsLock(float elapsedTime, float lastTime, void* clientData)
+{
+		
 }
 
 MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
@@ -1205,7 +1236,7 @@ void nodeAdded(MObject &node, void* clientData)
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MObject callBackNode;
-
+	
 	MStatus res = MS::kSuccess;
 
 	MFnPlugin MayaApplication(obj, "Maya plugin", "1.0", "Any", &res);
@@ -1225,14 +1256,29 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	MCallbackId id = MTimerMessage::addTimerCallback
 	(
-		5,
-		timerCallback,
+		0.03334,
+		ThirtyFpsLock,
 		NULL, &status
 	);
 
 	if (status == MS::kSuccess) {
 
 		if (myCallbackArray.append(id) == MS::kSuccess)
+		{
+
+		}
+	}
+
+	MCallbackId sixtyFpsId = MTimerMessage::addTimerCallback
+	(
+		0.01667,
+		SixtyFpsLock,
+		NULL, &status
+	);
+
+	if (status == MS::kSuccess) {
+
+		if (myCallbackArray.append(sixtyFpsId) == MS::kSuccess)
 		{
 
 		}
@@ -1347,7 +1393,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 	//	MGlobal::displayInfo(eventNames[i]);
 	//}
 
-	findCamera();
+	
 	return res;
 }
 
