@@ -284,12 +284,15 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
                 int indexCount = 0;//Keep track of what index to store inside the faceTriangle array
                 for (size_t i = 0; i < triCount; i++)
                 {
+
                     faceTriangle[i][0] = vtxTriIdx[indexCount];
                     indexCount++;
                     faceTriangle[i][1] = vtxTriIdx[indexCount];
                     indexCount++;
                     faceTriangle[i][2] = vtxTriIdx[indexCount];
+					indexCount++;
                 }
+
 				for (size_t i = 0; i < triCount; i++)//loops through each triangle in the current face
 				{
                     localIndex[i] = GetLocalIndex(polyVertexIndex, faceTriangle[i]);
@@ -297,52 +300,38 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 
 					int localIndexArray[1000];// = new int[localIndex[i].length()];
                     localIndex[i].get(localIndexArray);
-
+					MIntArray currentTriVtxIndices;
+					MPointArray currentTriVtx;
+					meshIterator.getTriangle(i, currentTriVtx, currentTriVtxIndices);
                     for (size_t i = 0; i < 3; i++)//loops through every vertex in the triangle
                     { 
 						UV currentUV;
 						float2 UVss;
 						int uvIndex;
+
+						int triVtxIndex[3];
+						float triVtx[4];
+						currentTriVtx[i].get(triVtx);
+						currentTriVtxIndices.get(triVtxIndex);
+						
 						meshIterator.getUV(localIndexArray[i], UVss);
 						meshIterator.getUVIndex(localIndexArray[i], uvIndex);
 
 						int currentIndex = -1;
 						currentIndex = meshIterator.normalIndex(localIndexArray[i]);
-						//        cerr << "Current normal index " << currentIndex << endl;
+
 						currentUV.U = UVss[0];
 						currentUV.V = UVss[1];
 						normalIndices.push_back(currentIndex);
+
 						UVIndex.push_back(uvIndex);
-						UVs.push_back(currentUV);
                     }
 				}
 				delete[] localIndex;
 				delete[] faceTriangle;
-			}
-			//if (triCount == 1)
-			//{
-   //             MIntArray localIndex;
-   //             MIntArray faceTriangle;
-   //             faceTriangle.setLength(3);
-   //             faceTriangle[0] = vtxTriIdx[0];
-   //             faceTriangle[1] = vtxTriIdx[1];
-   //             faceTriangle[2] = vtxTriIdx[2];
-
-   //             localIndex = GetLocalIndex(polyVertexIndex, faceTriangle);
-			//	int localIndexArray[100]; //new int[localIndex.length()];
-   //             localIndex.get(localIndexArray);
-
-   //             for (size_t i = 0; i < 3; i++)//loops through each vertex in the triangle
-   //             {
-   //                 int currentIndex = -1;
-   //                 currentIndex = meshIterator.normalIndex(localIndexArray[i]);
-   //                 normalIndices.push_back(currentIndex);
-   //       //          cerr << "Current normal index: " << currentIndex << endl;
-   //             }
-   //           //  delete[] localIndexArray;
-			//}
-           
+			} 
 		}
+
 		MayaMesh createdMesh;
 		createdMesh.headerType = MsgType::CREATE_MESH;
 		
@@ -354,6 +343,26 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		strncpy(createdMesh.name, meshName.c_str(), sizeof(createdMesh.name));
 		createdMesh.name[sizeof(createdMesh.name) - 1] = 0;
 		
+		//UVs
+		MFloatArray uArr;
+		MFloatArray vArr;
+		newMesh.getUVs(uArr, vArr);
+		int nrOfUvs = newMesh.numUVs();
+		float *uArray = new float[nrOfUvs];
+		float * vArray = new float[nrOfUvs];
+		uArr.get(uArray);
+		vArr.get(vArray);
+		
+		for (size_t i = 0; i < nrOfUvs; i++)
+		{
+			UV currentUV;
+			currentUV.U = uArray[i];
+			currentUV.V = vArray[i];
+			cerr << "U[" << currentUV.U << "]" << " V[" << currentUV.V << endl;
+			UVs.push_back(currentUV);
+		}
+
+
 		//Getting vertex data
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray, MSpace::kObject);
