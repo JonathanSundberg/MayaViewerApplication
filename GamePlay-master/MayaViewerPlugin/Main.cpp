@@ -792,6 +792,7 @@ void updateMesh(MPlug &plug)
 					faceTriangle[i][1] = vtxTriIdx[indexCount];
 					indexCount++;
 					faceTriangle[i][2] = vtxTriIdx[indexCount];
+					indexCount++;
 				}
 				for (size_t i = 0; i < triCount; i++)//loops through each triangle in the current face
 				{
@@ -815,8 +816,7 @@ void updateMesh(MPlug &plug)
 						currentUV.U = UVss[0];
 						currentUV.V = UVss[1];
 						normalIndices.push_back(currentIndex);
-						UVIndex.push_back(uvIndex);
-						UVs.push_back(currentUV);
+						UVIndex.push_back(uvIndex);					
 					}
 				}
 				delete[] localIndex;
