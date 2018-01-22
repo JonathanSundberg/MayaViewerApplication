@@ -117,9 +117,7 @@ void Main::CameraUpdated(char* &msg)
 			_scene->findNode(mCam->name)->setTranslation(translateVec);
 			_scene->findNode(mCam->name)->setRotation(mCam->Rot[0], mCam->Rot[1], mCam->Rot[2], mCam->Rot[3]);
 			_scene->findNode(mCam->name)->getCamera()->setZoomX(mCam->zoom);
-			_scene->findNode(mCam->name)->getCamera()->setZoomY(mCam->zoom);
-			/*_scene->findNode(mCam->name)->getCamera()->setZoomX(mCam->zoom);
-			_scene->findNode(mCam->name)->getCamera()->setZoomY(mCam->zoom);*/
+			_scene->findNode(mCam->name)->getCamera()->setZoomY(mCam->zoom); 
 			_scene->setActiveCamera(_scene->findNode(mCam->name)->getCamera());
 		}
 		else
@@ -157,7 +155,15 @@ void Main::TransformChanged(char* &msg)
 	
 	delete[] transformData;
 }
+void Main::nodeRemoved(char* &msg)
+{
+	NodeName* nodeName = new NodeName();
+	memcpy(nodeName, msg, sizeof(NodeName));
+	
+	_scene->removeNode(_scene->findNode(nodeName->name));
 
+	delete[] nodeName;
+}
 void Main::UpdateMeshData(char* &msg)
 {
 	MayaMesh* meshRecieved = new MayaMesh();
@@ -395,6 +401,9 @@ void Main::unPack()
 		break;
 	case(int)MsgType::COLOR_UPDATE:
 		ColorUpdate(Package);
+		break;
+	case(int)MsgType::NODE_REMOVED:
+		nodeRemoved(Package);
 		break;
 	default:
 		break;

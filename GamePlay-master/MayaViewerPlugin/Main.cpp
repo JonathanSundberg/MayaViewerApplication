@@ -104,8 +104,8 @@ void CameraViewCallback(const MString &str, void* clientData)
 		myCamera.isOrtho = MyCam.isOrtho();
 		myCamera.farPlane = (float)MyCam.farClippingPlane();
 		myCamera.nearPlane = (float)MyCam.nearClippingPlane();
+		//myCamera.zoom = (float)MyCam.zoom();
 		myCamera.zoom = (float)MyCam.orthoWidth();
-		
 
 		string CamName = "";
 		if (myCamera.isOrtho)
@@ -1243,6 +1243,31 @@ void nodeAdded(MObject &node, void* clientData)
 
 }
 
+void nodeRemoved(MObject &node, void* clientData)
+{
+	if (node.hasFn(MFn::kMesh))
+	{
+		NodeName nodeName;
+		MStatus status;
+		MFnMesh mesh(node, &status);
+		if (status == MS::kSuccess)
+		{
+	/*		string meshName = newMesh.name().asChar();
+			strncpy(createdMesh.name, meshName.c_str(), sizeof(createdMesh.name));
+			createdMesh.name[sizeof(createdMesh.name) - 1] = 0;
+*/
+			nodeName.headerType = MsgType::NODE_REMOVED;
+			string strName = mesh.name().asChar();
+			strncpy(nodeName.name, strName.c_str(), sizeof(nodeName.name));
+			nodeName.name[sizeof(nodeName.name) - 1] = 0;
+			
+
+			memcpy(Message, &nodeName, sizeof(NodeName));
+			Comlib->send(Message, sizeof(NodeName));
+		}
+	}
+}
+
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MObject callBackNode;
@@ -1305,6 +1330,20 @@ EXPORT MStatus initializePlugin(MObject obj)
 	if (status == MS::kSuccess)
 	{
 		if (myCallbackArray.append(addNodeID) == MS::kSuccess)
+		{
+
+		}
+	}
+	MCallbackId removeNodeID = MDGMessage::addNodeRemovedCallback
+	(
+		nodeRemoved,
+		"dependNode",
+		NULL,
+		&status
+	);
+	if (status == MS::kSuccess)
+	{
+		if (myCallbackArray.append(removeNodeID) == MS::kSuccess)
 		{
 
 		}

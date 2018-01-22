@@ -91,6 +91,7 @@ private:
 	
 	void ColorUpdate(char * &msg);
 
+	void nodeRemoved(char* &msg);
 
 	//MeshContainer meshContainer;
 	
