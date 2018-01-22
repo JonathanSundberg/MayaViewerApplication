@@ -863,6 +863,24 @@ void updateMesh(MPlug &plug)
 		strncpy(createdMesh.name, meshName.c_str(), sizeof(createdMesh.name));
 		createdMesh.name[sizeof(createdMesh.name) - 1] = 0;
 
+		MFloatArray uArr;
+		MFloatArray vArr;
+		newMesh.getUVs(uArr, vArr);
+		int nrOfUvs = newMesh.numUVs();
+		float *uArray = new float[nrOfUvs];
+		float * vArray = new float[nrOfUvs];
+		uArr.get(uArray);
+		vArr.get(vArray);
+
+		for (size_t i = 0; i < nrOfUvs; i++)
+		{
+			UV currentUV;
+			currentUV.U = uArray[i];
+			currentUV.V = vArray[i];
+		//	cerr << "U[" << currentUV.U << "]" << " V[" << currentUV.V << endl;
+			UVs.push_back(currentUV);
+		}
+
 		//Getting vertex data
 		MFloatPointArray vtxArray;
 		newMesh.getPoints(vtxArray, MSpace::kObject);
