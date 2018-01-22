@@ -104,7 +104,8 @@ void CameraViewCallback(const MString &str, void* clientData)
 		myCamera.isOrtho = MyCam.isOrtho();
 		myCamera.farPlane = (float)MyCam.farClippingPlane();
 		myCamera.nearPlane = (float)MyCam.nearClippingPlane();
-		myCamera.zoom = (float)MyCam.zoom();
+		myCamera.zoom = (float)MyCam.orthoWidth();
+		
 
 		string CamName = "";
 		if (myCamera.isOrtho)

@@ -95,6 +95,7 @@ void Main::CameraUpdated(char* &msg)
 		if (mCam->isOrtho)
 		{
 			Camera* newCam = Camera::createOrthographic(20, 20, mCam->aspectRatio, mCam->nearPlane, mCam->farPlane);
+			
 			Node* orthoCam = _scene->addNode(mCam->name);
 			orthoCam->setCamera(newCam);
 			_scene->setActiveCamera(newCam);
@@ -115,6 +116,8 @@ void Main::CameraUpdated(char* &msg)
 		{
 			_scene->findNode(mCam->name)->setTranslation(translateVec);
 			_scene->findNode(mCam->name)->setRotation(mCam->Rot[0], mCam->Rot[1], mCam->Rot[2], mCam->Rot[3]);
+			_scene->findNode(mCam->name)->getCamera()->setZoomX(mCam->zoom);
+			_scene->findNode(mCam->name)->getCamera()->setZoomY(mCam->zoom);
 			/*_scene->findNode(mCam->name)->getCamera()->setZoomX(mCam->zoom);
 			_scene->findNode(mCam->name)->getCamera()->setZoomY(mCam->zoom);*/
 			_scene->setActiveCamera(_scene->findNode(mCam->name)->getCamera());
