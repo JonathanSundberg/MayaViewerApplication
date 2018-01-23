@@ -437,6 +437,7 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 		memcpy(Message + head, UVIndex.data(), cpySize);
 		head += cpySize;
 
+
 		Comlib->send(Message, head);
 
 		//Sending the transformdata after vertex translation to stop it from snapping to origo
@@ -989,12 +990,82 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		{
 			MGlobal::displayInfo(plug.name());
 			
+			MFnDependencyNode mf(plug.node());
+						
 			MGlobal::displayInfo(plug.info());
 			MString value;
 			plug.getValue(value);
 
 			MGlobal::displayInfo(value);
-			
+
+			MPlugArray plugArray;
+			string matName;
+			mf.getConnections(plugArray);
+			for (size_t i = 0; i < plugArray.length(); i++)
+			{
+				MGlobal::displayInfo(plugArray[i].name());
+
+
+				MPlugArray SecondArray;
+				plugArray[i].connectedTo(SecondArray, true, true);
+
+				for (size_t j = 0; j < SecondArray.length(); j++)
+				{
+					if (SecondArray[j].node().hasFn(MFn::Type::kLambert))
+					{
+						
+						MFnLambertShader lambShader(SecondArray[j].node());
+						MGlobal::displayInfo(lambShader.name());
+						TextureName texName;
+						string matName = lambShader.name().asChar();
+						strncpy(texName.matName, lambShader.name().asChar(), sizeof(texName.matName));
+						texName.matName[sizeof(texName.matName) - 1] = 0;
+
+						MPlug colorPlug = lambShader.findPlug("color");
+						MPlug outCPlug;
+						MPlugArray colorConnections;
+						colorPlug.connectedTo(colorConnections, true, false);
+
+						if (colorConnections.length() > 0)
+						{
+							for (size_t i = 0; i < colorConnections.length(); i++)
+							{
+								//MGlobal::displayInfo(colorConnections[i].name());
+								outCPlug = colorConnections[i];
+							}
+							MFnDependencyNode texNode(outCPlug.node());
+							MPlug texturePlug = texNode.findPlug("fileTextureName");
+
+							MString texPath;
+							texturePlug.getValue(texPath);
+							MGlobal::displayInfo("texturename: " + texPath);
+							string pathName = texPath.asChar();
+							strncpy(texName.file, pathName.c_str(), sizeof(texName.file));
+							texName.file[sizeof(texName.file) - 1] = 0;
+
+							texName.headerType = MsgType::TEXTURE_UPDATE;
+
+							memcpy(Message, &texName, sizeof(TextureName));
+							while (true)
+							{
+								if (Comlib->send(Message, sizeof(TextureName)))
+								{
+									break;
+								}
+							}
+						}
+					//	MPlug PathPlug = textureNode.findPlug("fileTextureName");
+					}
+				}
+				/*if (1)
+				{
+					MFnLambertShader lamb(plugArray[i].node());
+					matName = lamb.name().asChar();
+					break;
+				}*/
+
+			}
+			int a = 0;
 		}
 		/////////////////	MATERIAL	///////////////////
 		if (plug.node().hasFn(MFn::kLambert))
@@ -1043,14 +1114,15 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 					outColorPlug = myPlugs[i];
 				//	MGlobal::displayInfo(outColorPlug.node().apiTypeStr());
 				}
-
+				string matName = MyLambert.name().asChar();
 				MFnDependencyNode textureNode = outColorPlug.node();
 				MPlug PathPlug = textureNode.findPlug("fileTextureName");
 
 				MString texturename;
 				PathPlug.getValue(texturename);
-				//MGlobal::displayInfo("Texture name: ");
-			//	MGlobal::displayInfo(texturename);
+
+				MGlobal::displayInfo("Texture name: ");
+				MGlobal::displayInfo(texturename);
 			}
 			else
 			{

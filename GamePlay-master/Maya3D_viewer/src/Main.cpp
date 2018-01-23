@@ -193,6 +193,25 @@ void Main::ColorUpdate(char *& msg)
 
 	delete myColor;
 }
+void Main::TextureUpdate(char *& msg)
+{
+	TextureName *texName = new TextureName();
+	memcpy(texName, msg, sizeof(TextureName));
+	string tempMat = texName->matName;
+	string tempFile = texName->file;
+	for (size_t i = 0; i < container.matName.size(); i++)
+	{
+
+		if (container.matName[i] == tempMat)
+		{
+			const char* fileName = tempFile.c_str();
+			container.materials[i]->getParameter("u_diffuseTexture")->setValue(fileName, true);
+		}
+
+	}
+
+	delete[] texName;
+}
 void Main::CreateMesh(char* &msg)
 {
     
@@ -347,7 +366,7 @@ void Main::CreateMesh(char* &msg)
     sprintf(nodeName, meshRecieved->name);
     
 	Node *node = _scene->addNode(nodeName);
-	
+
 	//Adding the meshes and models to the meshcontainer struct
 	
 	container.meshes.push_back(newMesh);
@@ -405,6 +424,9 @@ void Main::unPack()
 	case(int)MsgType::NODE_REMOVED:
 		nodeRemoved(Package);
 		break;
+	case(int)MsgType::TEXTURE_UPDATE:
+		TextureUpdate(Package);
+			break;
 	default:
 		break;
 	}

@@ -93,6 +93,8 @@ private:
 
 	void nodeRemoved(char* &msg);
 
+	void TextureUpdate(char* &msg);
+
 	//MeshContainer meshContainer;
 	
 	unsigned int meshCount;
