@@ -54,6 +54,8 @@ struct matrix
 		sx, sy, sz;
 };
 string GetMeshMat(MFnMesh Mesh, MColor& meshColor);
+
+// Locks chosen package indesired FPS.
 void SixtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
 	if (CamInfo)
@@ -78,28 +80,8 @@ void SixtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 }
 void ThirtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
-	if (TRSVec.size() > 0)
-	{
-		for (auto& TRS : TRSVec)
-		{
-
-			memcpy(Message, &TRS, sizeof(TransformData));
-
-			while (true)
-			{
-
-				if (Comlib->send(Message, sizeof(TransformData)))
-				{
-					break;
-				}
-
-			}
-		}
-		TRSVec.clear();
-	}
-
-
-
+	
+	
 	if (VertexStorage.size()>0)
 	{
 		for (auto& vertexData:VertexStorage)
@@ -159,18 +141,40 @@ void ThirtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 		VertexStorage.clear();
 	}
 	
+	if (TRSVec.size() > 0)
+	{
+		for (auto& TRS : TRSVec)
+		{
+
+			memcpy(Message, &TRS, sizeof(TransformData));
+
+			while (true)
+			{
+
+				if (Comlib->send(Message, sizeof(TransformData)))
+				{
+					break;
+				}
+
+			}
+		}
+		TRSVec.clear();
+	}
 
 }
 void TenFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
 	
 }
+
 float calcAoV(float aperture, float fl)
 {
 	float fovCalc = aperture * 0.5 / (fl * 0.03937);
 	float fov = 2.0f * atan(fovCalc) / 3.14159 * 180.0;
 	return fov;
 }
+
+//	Callbacks when the camera updates, sends the perspective and TRS changes
 void CameraViewCallback(const MString &str, void* clientData)
 {
 	M3dView view;
@@ -282,35 +286,32 @@ void CameraViewCallback(const MString &str, void* clientData)
 		
 	}
 }
-void findCamera()
-{
-	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
-
-	for (; !dagIterator.isDone(); dagIterator.next())
-	{
-		if (dagIterator.currentItem().apiType() == MFn::Type::kCamera)
-		{
-
-			MFnCamera myCam = dagIterator.currentItem();
-
-			if (myCam.name() == "perspShape")
-			{
-				MString msg = "Perspective camera: ";
-				msg += myCam.absoluteName();
-
-				//MGlobal::displayInfo(msg);
-
-
-			}
-
-
-		}
-	}
-
-}
-
-
-
+//void findCamera()
+//{
+//	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
+//
+//	for (; !dagIterator.isDone(); dagIterator.next())
+//	{
+//		if (dagIterator.currentItem().apiType() == MFn::Type::kCamera)
+//		{
+//
+//			MFnCamera myCam = dagIterator.currentItem();
+//
+//			if (myCam.name() == "perspShape")
+//			{
+//				MString msg = "Perspective camera: ";
+//				msg += myCam.absoluteName();
+//
+//				//MGlobal::displayInfo(msg);
+//
+//
+//			}
+//
+//
+//		}
+//	}
+//
+//}
 
 MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
 {
@@ -618,6 +619,7 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 	}
 }
 
+//	Gathers the TRS from a mesh and sends it, Scale is made into a matrix and sent down the heirarchy and multiplied since it cannot be obtained in world coordinates.
 void recursiveTransform(MFnDagNode& Parent, bool topParent, matrix parentMatrix = matrix())
 {
 
@@ -825,6 +827,7 @@ void recursiveTransform(MFnDagNode& Parent, bool topParent, matrix parentMatrix 
 	}
 }
 
+//	Checks if a mesh has any parents with a transform, if so we go up as far as we can in the heirarchy before gathering and sending the TRS, this is  for the scale matrix multiplication.
 void GetParent(MFnDagNode& parent)
 {
 	for (int i = 0; i < parent.parentCount(); i++)
@@ -841,6 +844,7 @@ void GetParent(MFnDagNode& parent)
 	recursiveTransform(parent, true);
 }
 
+//	Collects the material name and color from a mesh.
 string GetMeshMat(MFnMesh Mesh,MColor& meshColor)
 {
 	MObjectArray Shaders;
@@ -877,6 +881,7 @@ string GetMeshMat(MFnMesh Mesh,MColor& meshColor)
 	}
 }
 
+// Gets the mesh(es?) connected to a specific material, probobly never used.
 string GetMeshFromMat(MFnLambertShader myLambert)
 {
 	string name;
@@ -1236,6 +1241,7 @@ void updateMesh(MPlug &plug)
 	}
 }
 
+//	whenever an attribute changes in the scene this is called, mostly used for mesh TRS and Vertex TRS calls, also does textures and materials.
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 
@@ -1545,6 +1551,7 @@ void nodeRemoved(MObject &node, void* clientData)
 	}
 }
 
+//	when plugin is loaded this runs, initialization.
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MObject callBackNode;
@@ -1738,6 +1745,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 	return res;
 }
 
+//	called when we exit the plugin, to safely clear our callback array.
 EXPORT MStatus uninitializePlugin(MObject obj)
 {
 	MFnPlugin App(obj);

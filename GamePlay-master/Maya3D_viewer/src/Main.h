@@ -68,7 +68,7 @@ private:
 	* Creates a new mesh from a newly created mesh in maya
 	* @param[in] msg The message containing data about the mesh
 	*/
-	void CreateMesh(char* &msg);
+	void CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec = { 0,0,0 }, Quaternion replaceRotQuat = { 0,0,0,0}, Vector3 replaceScaleVec = { 0,0,0 });
 	/*
 	*	Unpakcs the message sent from maya
 	*/
