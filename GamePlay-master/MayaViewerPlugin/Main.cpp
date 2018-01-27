@@ -985,7 +985,8 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
 
-		
+	
+
 		if (plug.node().apiType() == MFn::Type::kFileTexture)
 		{
 			MGlobal::displayInfo(plug.name());
