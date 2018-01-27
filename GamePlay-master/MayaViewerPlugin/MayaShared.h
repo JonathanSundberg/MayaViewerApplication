@@ -10,7 +10,8 @@ enum class MsgType
 	TRANSFORM_NODE_TRANSFORM,
 	CAMERA_UPDATE,
 	COLOR_UPDATE,
-	NODE_REMOVED
+	NODE_REMOVED,
+	TEXTURE_UPDATE
 
 };
 
@@ -87,6 +88,12 @@ struct Color
 	MsgType headerType;
 	float colors[3];
 	char meshName[75];
+	char matName[75];
+};
+struct TextureName
+{
+	MsgType headerType;
+	char file[255];
 	char matName[75];
 };
 struct NodeName
