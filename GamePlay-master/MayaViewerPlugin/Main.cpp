@@ -26,7 +26,6 @@ bool CamInfo = false;
 
 // TRS
 TransformData FpsLockTRS;
-clock_t TRSclock;
 bool TRSInfo = false;
 std::vector<TransformData> TRSVec;
 
@@ -44,6 +43,10 @@ struct storeMeshData
 };
 vector<storeMeshData> VertexStorage;
 
+
+//	COLOR
+Color colorLock;
+bool SendColor = false;
 
 struct matrix
 {
@@ -164,7 +167,21 @@ void ThirtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 }
 void TenFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
-	
+
+	if (SendColor)
+	{
+
+		memcpy(Message, &colorLock, sizeof(Color));
+
+		while (true)
+		{
+			if (Comlib->send(Message, sizeof(Color)))
+			{
+				break;
+			}
+		}
+		SendColor = false;
+	}
 }
 
 float calcAoV(float aperture, float fl)
@@ -286,32 +303,7 @@ void CameraViewCallback(const MString &str, void* clientData)
 		
 	}
 }
-//void findCamera()
-//{
-//	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
-//
-//	for (; !dagIterator.isDone(); dagIterator.next())
-//	{
-//		if (dagIterator.currentItem().apiType() == MFn::Type::kCamera)
-//		{
-//
-//			MFnCamera myCam = dagIterator.currentItem();
-//
-//			if (myCam.name() == "perspShape")
-//			{
-//				MString msg = "Perspective camera: ";
-//				msg += myCam.absoluteName();
-//
-//				//MGlobal::displayInfo(msg);
-//
-//
-//			}
-//
-//
-//		}
-//	}
-//
-//}
+
 
 MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
 {
@@ -1384,87 +1376,25 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			}
 			else
 			{
-				Color* newColor = new Color();
-				newColor->headerType = MsgType::COLOR_UPDATE;
-				 newColor->colors[0] = myColor.r;
-				 newColor->colors[1] = myColor.g;
-				 newColor->colors[2] = myColor.b;
+				Color newColor;
+				newColor.headerType = MsgType::COLOR_UPDATE;
+				 newColor.colors[0] = myColor.r;
+				 newColor.colors[1] = myColor.g;
+				 newColor.colors[2] = myColor.b;
 				 
-				 strncpy(newColor->meshName, meshName.c_str(), sizeof(newColor->meshName));
-				 newColor->meshName[sizeof(newColor->meshName) - 1] = 0;
+				 strncpy(newColor.meshName, meshName.c_str(), sizeof(newColor.meshName));
+				 newColor.meshName[sizeof(newColor.meshName) - 1] = 0;
 				 string matName = MyLambert.name().asChar();
-				 strncpy(newColor->matName, matName.c_str(), sizeof(newColor->matName));
-				 newColor->matName[sizeof(newColor->matName) - 1] = 0;
-
-				 memcpy(Message, newColor, sizeof(Color));
-
-				 while (true)
-				 {
-					 if (Comlib->send(Message,sizeof(Color)))
-					 {
-						 break;
-					 }
-				 }
+				 strncpy(newColor.matName, matName.c_str(), sizeof(newColor.matName));
+				 newColor.matName[sizeof(newColor.matName) - 1] = 0;
 
 
+				 colorLock = newColor;
+				 SendColor = true;
 			}
-
-
-
-			/*print += myColor.r;
-			print += " ";
-			print += myColor.g;
-			print += " ";
-			print += myColor.b;
-			print += " ";
-			print += myColor.a;*/
-
-			/*print += transp.r;
-			print += " ";
-			print += transp.g;
-			print += " ";
-			print += transp.b;
-			print += " ";
-			print += transp.a;*/
-
-			/*print += incan.r;
-			print += " ";
-			print += incan.g;
-			print += " ";
-			print += incan.b;
-			print += " ";
-			print += incan.a;*/
-
-			/*print += diffuse.r;
-			print += " ";
-			print += diffuse.g;
-			print += " ";
-			print += diffuse.b;
-			print += " ";
-			print += diffuse.a;*/
-
-			//MGlobal::displayInfo(print);
 		}
 		MStatus status;
 
-		if (plug.node().apiType() != MFn::Type::kCamera)
-		{
-			/*MGlobal::displayInfo(plug.parent().partialName(false, false, false, false, true, false, NULL));
-
-			MGlobal::displayInfo(plug.name());
-
-			MGlobal::displayInfo(plug.partialName());
-
-			MGlobal::displayInfo(plug.node().apiTypeStr());*/
-		}
-
-		/////////////////	CAMERA	///////////////////
-		if (plug.node().apiType() == MFn::Type::kCamera)
-		{
-	/*		MGlobal::displayInfo("Camera attribute changed");
-			MGlobal::displayInfo(plug.name());
-			MGlobal::displayInfo(plug.node().apiTypeStr());*/
-		}
 
 		/////////////////	TRANSFORM	///////////////////
 		if (plug.node().apiType() == MFn::Type::kTransform)
