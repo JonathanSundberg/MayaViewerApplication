@@ -1124,6 +1124,26 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 				MGlobal::displayInfo("Texture name: ");
 				MGlobal::displayInfo(texturename);
+				
+				MatChange materialChange;
+
+				materialChange.headerType = MsgType::MATERIAL_CHANGE;
+				strncpy(materialChange.texture, texturename.asChar(), sizeof(materialChange.texture));
+				materialChange.texture[sizeof(materialChange.texture) - 1] = 0;
+				strncpy(materialChange.matName, matName.c_str(), sizeof(materialChange.matName));
+				materialChange.matName[sizeof(materialChange.matName) - 1] = 0;
+				strncpy(materialChange.meshName, meshName.c_str(), sizeof(materialChange.meshName));
+				materialChange.meshName[sizeof(materialChange.meshName) - 1] = 0;
+
+				memcpy(Message, &materialChange, sizeof(MatChange));
+				while (true)
+				{
+					if (Comlib->send(Message, sizeof(MatChange)))
+					{
+						break;
+					}
+				}
+
 			}
 			else
 			{

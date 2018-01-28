@@ -11,8 +11,8 @@ enum class MsgType
 	CAMERA_UPDATE,
 	COLOR_UPDATE,
 	NODE_REMOVED,
-	TEXTURE_UPDATE
-
+	TEXTURE_UPDATE,
+	MATERIAL_CHANGE
 };
 
 struct TransformData
@@ -100,4 +100,11 @@ struct NodeName
 {
 	MsgType headerType;
 	char name[75];
+};
+struct MatChange
+{
+	MsgType headerType;
+	char texture[255];
+	char meshName[75];
+	char matName[75];
 };

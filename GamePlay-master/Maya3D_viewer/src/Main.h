@@ -95,6 +95,8 @@ private:
 
 	void TextureUpdate(char* &msg);
 
+	void MaterialChange(char* &msg);
+
 	//MeshContainer meshContainer;
 	
 	unsigned int meshCount;

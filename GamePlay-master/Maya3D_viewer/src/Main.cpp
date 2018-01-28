@@ -175,7 +175,7 @@ void Main::UpdateMeshData(char* &msg)
 	CreateMesh(msg);
 	
 }
-void Main::ColorUpdate(char *& msg)
+void Main::ColorUpdate(char* &msg)
 {
 	Color *myColor = new Color();
 
@@ -193,7 +193,7 @@ void Main::ColorUpdate(char *& msg)
 
 	delete myColor;
 }
-void Main::TextureUpdate(char *& msg)
+void Main::TextureUpdate(char* &msg)
 {
 	TextureName *texName = new TextureName();
 	memcpy(texName, msg, sizeof(TextureName));
@@ -211,6 +211,28 @@ void Main::TextureUpdate(char *& msg)
 	}
 
 	delete[] texName;
+}
+void Main::MaterialChange(char* &msg)
+{
+	MatChange* newMaterial = new MatChange();
+	memcpy(newMaterial, msg, sizeof(MatChange));
+
+	string tempMesh = newMaterial->meshName;
+	string tempMat = newMaterial->matName;
+	string tempTex = newMaterial->texture;
+
+	for (size_t i = 0; i < container.name.size(); i++)
+	{
+		if (container.name[i] == tempMesh)
+		{
+			container.matName[i] = tempMat;
+			const char* texFile = tempTex.c_str();
+			container.materials[i]->getParameter("u_diffuseTexture")->setValue(texFile, true);
+		}
+	}
+
+
+
 }
 void Main::CreateMesh(char* &msg)
 {
@@ -343,18 +365,20 @@ void Main::CreateMesh(char* &msg)
 	SAFE_RELEASE(light);
 	lightNode->translate(Vector3(0, 1, 5));
 
-	char* texturePath = "res/uvsnap.png";
+	//char* texturePath = "res/uvsnap.png";
     models[0] = Model::create(newMesh);
-	mats[0] = models[0]->setMaterial("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+	mats[0] = models[0]->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	//mats[0] = models[0]->setMaterial("res/demo.material#lambert2");
 	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.25f, 0.25f, 0.25f));
 	mats[0]->getParameter("u_pointLightColor[0]")->setValue(_scene->findNode("Light")->getLight()->getColor());
 	mats[0]->getParameter("u_pointLightPosition[0]")->bindValue(_scene->findNode("Light"), &Node::getTranslationWorld);
 	mats[0]->getParameter("u_pointLightRangeInverse[0]")->bindValue(_scene->findNode("Light")->getLight(), &Light::getRangeInverse);
 	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-	sampler = mats[0]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
+	mats[0]->getParameter("u_diffuseColor")->setValue(Vector4(0.4f, 0.4f, 0.4f, 1.0f));
+	//sampler = mats[0]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
 	
-	sampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+	//sampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 
 	mats[0]->getStateBlock()->setCullFace(true);
 	mats[0]->getStateBlock()->setDepthTest(true);
@@ -427,6 +451,9 @@ void Main::unPack()
 	case(int)MsgType::TEXTURE_UPDATE:
 		TextureUpdate(Package);
 			break;
+	case(int)MsgType::MATERIAL_CHANGE:
+		MaterialChange(Package);
+		break;
 	default:
 		break;
 	}
