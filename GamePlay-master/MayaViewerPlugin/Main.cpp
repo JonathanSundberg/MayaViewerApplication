@@ -1342,20 +1342,11 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 		{
 			
 			MStatus status;
-			/*MGlobal::displayInfo(plug.name());
-			MGlobal::displayInfo("Material attribute changed");
-			MGlobal::displayInfo(plug.node().apiTypeStr());*/
 			MFnLambertShader MyLambert(plug.node());
 			string meshName = GetMeshFromMat(plug.node());
-			//MGlobal::displayInfo(MyLambert.absoluteName());
 
 			MPlugArray myArrray;
 			MyLambert.getConnections(myArrray);
-		/*	for (size_t i = 0; i < myArrray.length(); i++)
-			{
-				MGlobal::displayInfo(myArrray[i].name());
-			}
-			MGlobal::displayInfo(myArrray[1].node().apiTypeStr());*/
 			MFnLambertShader anotherOne(myArrray[1].node());
 			anotherOne.getConnections(myArrray);
 			for (size_t i = 0; i < myArrray.length(); i++)
@@ -1379,10 +1370,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 				for (size_t i = 0; i < myPlugs.length(); i++)
 				{
-				//	MGlobal::displayInfo("myPlug connected plugs: ");
-				//	MGlobal::displayInfo(myPlugs[i].name());
 					outColorPlug = myPlugs[i];
-				//	MGlobal::displayInfo(outColorPlug.node().apiTypeStr());
 				}
 				string matName = MyLambert.name().asChar();
 				MFnDependencyNode textureNode = outColorPlug.node();
