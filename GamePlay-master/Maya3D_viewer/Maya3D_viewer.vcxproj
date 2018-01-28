@@ -18,7 +18,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Maya3D_viewer</RootNamespace>
     <ProjectGuid>{30BEE126-8B04-4F96-84A1-30CBF8B3E491}</ProjectGuid>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

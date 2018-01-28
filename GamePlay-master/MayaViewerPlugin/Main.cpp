@@ -5,6 +5,7 @@
 #include <sstream>
 #include <assert.h>
 #include <time.h>
+#include <vector>
 using namespace std;
 
 MCallbackIdArray myCallbackArray;
@@ -16,27 +17,164 @@ char *Message;
 size_t length;
 
 /*		ALL GLOBAL CONTAINERS AND BOOLS		*/	
-MCamera fpsLockCamera;
-MString camStr;
-clock_t camClock;
-bool sixtyFpscamera = false;
 
+// CAMERA
+MCamera fpsLockCamera;
+clock_t camClock;
+bool CamInfo = false;
+
+
+// TRS
+TransformData FpsLockTRS;
+clock_t TRSclock;
+bool TRSInfo = false;
+std::vector<TransformData> TRSVec;
+
+
+// VERTICES
+struct storeMeshData
+{
+	MayaMesh createdMeshFPSLOCK;
+	vector<int> normalIndicesFPSLOCK;
+	vector<Normal> meshNormalsFPSLOCK;
+	vector<int> vtxIndicesFPSLOCK;
+	vector<Vertex> verticesFPSLOCK;
+	vector<int> UVIndexFPSLOCK;
+	vector<UV> UVsFPSLOCK;
+};
+vector<storeMeshData> VertexStorage;
+
+
+struct matrix
+{
+	matrix(): tx(1), ty(1),tz(1),rx(1),ry(1),rz(1),sx(1),sy(1),sz(1) {}
+	float 
+		tx, ty, tz,
+		rx, ry, rz,
+		sx, sy, sz;
+};
 string GetMeshMat(MFnMesh Mesh, MColor& meshColor);
-void recursiveTransform(MFnDagNode& Parent, bool cameraTransform);
+
+// Locks chosen package indesired FPS.
+void SixtyFpsLock(float elapsedTime, float lastTime, void* clientData)
+{
+	if (CamInfo)
+	{
+		size_t cpySize = 0;
+		cpySize = sizeof(fpsLockCamera);
+		memcpy(Message, &fpsLockCamera, cpySize);
+
+		while (true)
+		{
+			if (Comlib->send(Message, sizeof(fpsLockCamera)))
+			{
+				break;
+			}
+		}
+		CamInfo = false;
+	}
+
+	
+	
+	
+}
 void ThirtyFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
 	
+	
+	if (VertexStorage.size()>0)
+	{
+		for (auto& vertexData:VertexStorage)
+		{
+			int floatSize = sizeof(float);
+			size_t cpySize = 0;
+			size_t head = 0;
+			cpySize = sizeof(vertexData.createdMeshFPSLOCK);
+			memcpy(Message, &vertexData.createdMeshFPSLOCK, cpySize);
+			head += cpySize;
+
+			//Vertex data
+			cpySize = (sizeof(int) * vertexData.vtxIndicesFPSLOCK.size());
+			memcpy(Message + head, vertexData.vtxIndicesFPSLOCK.data(), cpySize);
+			head += cpySize;
+
+			cpySize = (sizeof(Vertex) * vertexData.verticesFPSLOCK.size());
+			memcpy(Message + head, vertexData.verticesFPSLOCK.data(), cpySize);
+			head += cpySize;
+
+			//Normal data
+			cpySize = vertexData.normalIndicesFPSLOCK.size() * sizeof(int);
+			memcpy(Message + head, vertexData.normalIndicesFPSLOCK.data(), cpySize);
+			head += cpySize;
+
+			cpySize = vertexData.meshNormalsFPSLOCK.size() * sizeof(Normal);
+			memcpy(Message + head, vertexData.meshNormalsFPSLOCK.data(), cpySize);
+			head += cpySize;
+
+			//UV data
+			cpySize = vertexData.UVsFPSLOCK.size() * sizeof(UV);
+			memcpy(Message + head, vertexData.UVsFPSLOCK.data(), cpySize);
+			head += cpySize;
+
+			cpySize = vertexData.UVIndexFPSLOCK.size() * sizeof(int);
+			memcpy(Message + head, vertexData.UVIndexFPSLOCK.data(), cpySize);
+			head += cpySize;
+
+			while (true)
+			{
+				if (Comlib->send(Message, head))
+				{
+					break;
+				}
+			}
+
+			
+				
+			vertexData.normalIndicesFPSLOCK.clear();
+			vertexData.meshNormalsFPSLOCK.clear();
+			vertexData.vtxIndicesFPSLOCK.clear();
+			vertexData.verticesFPSLOCK.clear();
+			vertexData.UVIndexFPSLOCK.clear();
+			vertexData.UVsFPSLOCK.clear();
+		}
+		
+		VertexStorage.clear();
+	}
+	
+	if (TRSVec.size() > 0)
+	{
+		for (auto& TRS : TRSVec)
+		{
+
+			memcpy(Message, &TRS, sizeof(TransformData));
+
+			while (true)
+			{
+
+				if (Comlib->send(Message, sizeof(TransformData)))
+				{
+					break;
+				}
+
+			}
+		}
+		TRSVec.clear();
+	}
+
 }
 void TenFpsLock(float elapsedTime, float lastTime, void* clientData)
 {
-
+	
 }
+
 float calcAoV(float aperture, float fl)
 {
 	float fovCalc = aperture * 0.5 / (fl * 0.03937);
 	float fov = 2.0f * atan(fovCalc) / 3.14159 * 180.0;
 	return fov;
 }
+
+//	Callbacks when the camera updates, sends the perspective and TRS changes
 void CameraViewCallback(const MString &str, void* clientData)
 {
 	M3dView view;
@@ -119,12 +257,12 @@ void CameraViewCallback(const MString &str, void* clientData)
 		MVector rightVec = MyCam.rightDirection();
 	
 
-		camStr = str;
+		
 		fpsLockCamera = myCamera;
 		clock_t timer = clock() - camClock;
 	
 
-		if (timer >16.67)
+		if (timer > 16.67)
 		{
 
 			size_t cpySize = 0;
@@ -139,45 +277,41 @@ void CameraViewCallback(const MString &str, void* clientData)
 				}
 			}
 			camClock = clock();
+			CamInfo = false;
 		}
-		
-		
-		
-		MGlobal::displayInfo("camera!");
-		
-	}
-}
-void findCamera()
-{
-	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
-
-	for (; !dagIterator.isDone(); dagIterator.next())
-	{
-		if (dagIterator.currentItem().apiType() == MFn::Type::kCamera)
+		else
 		{
-
-			MFnCamera myCam = dagIterator.currentItem();
-
-			if (myCam.name() == "perspShape")
-			{
-				MString msg = "Perspective camera: ";
-				msg += myCam.absoluteName();
-
-				MGlobal::displayInfo(msg);
-
-
-			}
-
-
+			CamInfo = true;
 		}
-	}
-
-}
-
-void SixtyFpsLock(float elapsedTime, float lastTime, void* clientData)
-{
 		
+	}
 }
+//void findCamera()
+//{
+//	MItDag dagIterator(MItDag::kBreadthFirst, MFn::kCamera);
+//
+//	for (; !dagIterator.isDone(); dagIterator.next())
+//	{
+//		if (dagIterator.currentItem().apiType() == MFn::Type::kCamera)
+//		{
+//
+//			MFnCamera myCam = dagIterator.currentItem();
+//
+//			if (myCam.name() == "perspShape")
+//			{
+//				MString msg = "Perspective camera: ";
+//				msg += myCam.absoluteName();
+//
+//				//MGlobal::displayInfo(msg);
+//
+//
+//			}
+//
+//
+//		}
+//	}
+//
+//}
 
 MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
 {
@@ -486,8 +620,10 @@ void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 	}
 }
 
-void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
+//	Gathers the TRS from a mesh and sends it, Scale is made into a matrix and sent down the heirarchy and multiplied since it cannot be obtained in world coordinates.
+void recursiveTransform(MFnDagNode& Parent, bool topParent, matrix parentMatrix = matrix())
 {
+
 	if (Parent.child(0).apiType() == MFn::kCamera)
 	{
 		return;
@@ -502,15 +638,7 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 	MFnTransform transNode(path, &status);
 
 
-	for (size_t i = 0; i < Parent.childCount(); i++)
-	{
-		
-		if (Parent.child(i).apiType() == MFn::Type::kTransform)
-		{
-			MFnDagNode childDag = Parent.child(i);
-			recursiveTransform(childDag, cameraTransform);
-		}
-	}
+	
 
 	if (status == MS::kSuccess)
 	{
@@ -590,6 +718,64 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		nodeTransform.Sy = fScale[1];
 		nodeTransform.Sz = fScale[2];
 
+		matrix scaleMatrix;
+		scaleMatrix.tx = nodeTransform.Sx;
+		scaleMatrix.ty = 0;
+		scaleMatrix.tz = 0;
+		scaleMatrix.rx = 0;
+		scaleMatrix.ry = nodeTransform.Sy;
+		scaleMatrix.rz = 0;
+		scaleMatrix.sx = 0;
+		scaleMatrix.sy = 0;
+		scaleMatrix.sz = nodeTransform.Sz;
+
+		matrix sendMatrix;
+		if (!topParent)
+		{
+			sendMatrix.tx = parentMatrix.tx*scaleMatrix.tx + parentMatrix.ty*scaleMatrix.rx + parentMatrix.tz*scaleMatrix.sx;
+			sendMatrix.ty = parentMatrix.tx*scaleMatrix.ty + parentMatrix.ty*scaleMatrix.ry + parentMatrix.tz*scaleMatrix.sy;
+			sendMatrix.tz = parentMatrix.tx*scaleMatrix.tz + parentMatrix.ty*scaleMatrix.rz + parentMatrix.tz*scaleMatrix.sz;
+
+			sendMatrix.rx = parentMatrix.rx*scaleMatrix.tx + parentMatrix.ry*scaleMatrix.rx + parentMatrix.rz*scaleMatrix.sx;
+			sendMatrix.ry = parentMatrix.rx*scaleMatrix.ty + parentMatrix.ry*scaleMatrix.ry + parentMatrix.rz*scaleMatrix.sy;
+			sendMatrix.rz = parentMatrix.rx*scaleMatrix.tz + parentMatrix.ry*scaleMatrix.rz + parentMatrix.rz*scaleMatrix.sz;
+
+			sendMatrix.sx = parentMatrix.sx*scaleMatrix.tx + parentMatrix.sy*scaleMatrix.rx + parentMatrix.sz*scaleMatrix.sx;
+			sendMatrix.sy = parentMatrix.sx*scaleMatrix.ty + parentMatrix.sy*scaleMatrix.ry + parentMatrix.sz*scaleMatrix.sy;
+			sendMatrix.sz = parentMatrix.sx*scaleMatrix.tz + parentMatrix.sy*scaleMatrix.rz + parentMatrix.sz*scaleMatrix.sz;
+
+		}
+		else
+		{
+			sendMatrix = scaleMatrix;
+		}
+		
+		nodeTransform.Sx = sendMatrix.tx;
+		nodeTransform.Sy = sendMatrix.ry;
+		nodeTransform.Sz = sendMatrix.sz;
+
+
+		MString scaleInfo;
+		scaleInfo += " S: ";
+		scaleInfo += nodeTransform.Sx;
+		scaleInfo += " ";
+		scaleInfo += nodeTransform.Sy;
+		scaleInfo += " ";
+		scaleInfo += nodeTransform.Sz;
+
+		MGlobal::displayInfo(scaleInfo);
+
+
+		for (size_t i = 0; i < Parent.childCount(); i++)
+		{
+
+			if (Parent.child(i).apiType() == MFn::Type::kTransform)
+			{
+				MFnDagNode childDag = Parent.child(i);
+				recursiveTransform(childDag,false,sendMatrix);
+			}
+		}
+
 
 		MDagPath tempPath;
 		Parent.getPath(tempPath);
@@ -599,7 +785,27 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 		strncpy(nodeTransform.name, mName.c_str(), sizeof(nodeTransform.name));
 		nodeTransform.name[sizeof(nodeTransform.name) - 1] = 0;
 
-		memcpy(Message, &nodeTransform, sizeof(TransformData));
+
+
+		bool found = false;
+		for (auto& TRS: TRSVec)
+		{
+			if (strcmp(nodeTransform.name,TRS.name) == 0)
+			{
+				TRS = nodeTransform;
+				found = true;
+			}
+			
+		}
+		if (!found)
+		{
+			TRSVec.push_back(nodeTransform);
+		}
+
+
+		
+		
+		/*memcpy(Message, &nodeTransform, sizeof(TransformData));
 
 		while (true)
 		{
@@ -609,7 +815,10 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 				break;
 			}
 
-		}
+		}*/
+
+		
+
 
 	}
 	else
@@ -619,6 +828,24 @@ void recursiveTransform(MFnDagNode& Parent, bool cameraTransform)
 	}
 }
 
+//	Checks if a mesh has any parents with a transform, if so we go up as far as we can in the heirarchy before gathering and sending the TRS, this is  for the scale matrix multiplication.
+void GetParent(MFnDagNode& parent)
+{
+	for (int i = 0; i < parent.parentCount(); i++)
+	{
+
+
+		if (parent.parent(i).apiType() == MFn::Type::kTransform)
+		{
+			MFnDagNode ParentDag = parent.parent(i);
+			GetParent(ParentDag);
+			return;
+		}
+	}
+	recursiveTransform(parent, true);
+}
+
+//	Collects the material name and color from a mesh.
 string GetMeshMat(MFnMesh Mesh,MColor& meshColor)
 {
 	MObjectArray Shaders;
@@ -655,6 +882,7 @@ string GetMeshMat(MFnMesh Mesh,MColor& meshColor)
 	}
 }
 
+// Gets the mesh(es?) connected to a specific material, probobly never used.
 string GetMeshFromMat(MFnLambertShader myLambert)
 {
 	string name;
@@ -926,47 +1154,82 @@ void updateMesh(MPlug &plug)
 
 		//**** Send mesh to gameplay
 		//Header data
-		int floatSize = sizeof(float);
-		size_t cpySize = 0;
-		size_t head = 0;
-		cpySize = sizeof(createdMesh);
-		memcpy(Message, &createdMesh, cpySize);
-		head += cpySize;
 
-		//Vertex data
-		cpySize = (sizeof(int) * vtxIndices.size());
-		memcpy(Message + head, vtxIndices.data(), cpySize);
-		head += cpySize;
 
-		cpySize = (sizeof(Vertex) * vertices.size());
-		memcpy(Message + head, vertices.data(), cpySize);
-		head += cpySize;
-
-		//Normal data
-		cpySize = normalIndices.size() * sizeof(int);
-		memcpy(Message + head, normalIndices.data(), cpySize);
-		head += cpySize;
-
-		cpySize = meshNormals.size() * sizeof(Normal);
-		memcpy(Message + head, meshNormals.data(), cpySize);
-		head += cpySize;
-
-		//UV data
-		cpySize = UVs.size() * sizeof(UV);
-		memcpy(Message + head, UVs.data(), cpySize);
-		head += cpySize;
-
-		cpySize = UVIndex.size() * sizeof(int);
-		memcpy(Message + head, UVIndex.data(), cpySize);
-		head += cpySize;
-
-		while (true)
+		bool found = false;
+		for (auto& vertexData:VertexStorage)
 		{
-			if (Comlib->send(Message, head))
+			if (strcmp(vertexData.createdMeshFPSLOCK.name, createdMesh.name) == 0)
 			{
+				vertexData.createdMeshFPSLOCK = createdMesh;
+				vertexData.normalIndicesFPSLOCK = normalIndices;
+				vertexData.meshNormalsFPSLOCK = meshNormals;
+				vertexData.vtxIndicesFPSLOCK = vtxIndices;
+				vertexData.verticesFPSLOCK = vertices;
+				vertexData.UVIndexFPSLOCK = UVIndex;
+				vertexData.UVsFPSLOCK = UVs;
+				found = true;
 				break;
 			}
 		}
+		if (!found)
+		{
+			storeMeshData newSave;
+			newSave.createdMeshFPSLOCK = createdMesh;
+			newSave.normalIndicesFPSLOCK = normalIndices;
+			newSave.meshNormalsFPSLOCK = meshNormals;
+			newSave.vtxIndicesFPSLOCK = vtxIndices;
+			newSave.verticesFPSLOCK = vertices;
+			newSave.UVIndexFPSLOCK = UVIndex;
+			newSave.UVsFPSLOCK = UVs;
+			VertexStorage.push_back(newSave);
+		}
+
+		
+
+
+
+		//int floatSize = sizeof(float);
+		//size_t cpySize = 0;
+		//size_t head = 0;
+		//cpySize = sizeof(createdMesh);
+		//memcpy(Message, &createdMesh, cpySize);
+		//head += cpySize;
+
+		////Vertex data
+		//cpySize = (sizeof(int) * vtxIndices.size());
+		//memcpy(Message + head, vtxIndices.data(), cpySize);
+		//head += cpySize;
+
+		//cpySize = (sizeof(Vertex) * vertices.size());
+		//memcpy(Message + head, vertices.data(), cpySize);
+		//head += cpySize;
+
+		////Normal data
+		//cpySize = normalIndices.size() * sizeof(int);
+		//memcpy(Message + head, normalIndices.data(), cpySize);
+		//head += cpySize;
+
+		//cpySize = meshNormals.size() * sizeof(Normal);
+		//memcpy(Message + head, meshNormals.data(), cpySize);
+		//head += cpySize;
+
+		////UV data
+		//cpySize = UVs.size() * sizeof(UV);
+		//memcpy(Message + head, UVs.data(), cpySize);
+		//head += cpySize;
+
+		//cpySize = UVIndex.size() * sizeof(int);
+		//memcpy(Message + head, UVIndex.data(), cpySize);
+		//head += cpySize;
+
+		//while (true)
+		//{
+		//	if (Comlib->send(Message, head))
+		//	{
+		//		break;
+		//	}
+		//}
 		
 		
 		//*******************************
@@ -979,8 +1242,14 @@ void updateMesh(MPlug &plug)
 	}
 }
 
+//	whenever an attribute changes in the scene this is called, mostly used for mesh TRS and Vertex TRS calls, also does textures and materials.
 void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
+
+	MGlobal::displayInfo(plug.name());
+	MGlobal::displayInfo(plug.info());
+
+	
 
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
@@ -1236,16 +1505,12 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 			MFnTransform myTrans(plug.node());
 			MFnDagNode myNode(plug.node());
 
-			if (myTrans.name() == "persp")
-			{
-				//recursive with camera
-				//recursiveTransform(myNode, true);
-			}
-			else
-			{
-
-				recursiveTransform(myNode, false);
-			}
+		
+			
+			//recursiveTransform(myNode,true);
+			GetParent(myNode);
+			
+			
 
 		}
 
@@ -1263,7 +1528,7 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 				updateMesh(plug);
 				MFnMesh myMesh(plug.node(), &status);
 				MFnDagNode dagNode = myMesh.parent(0);
-				recursiveTransform(dagNode, false);
+				GetParent(dagNode);
 				
 
 				if (status)
@@ -1379,6 +1644,7 @@ void nodeRemoved(MObject &node, void* clientData)
 	}
 }
 
+//	when plugin is loaded this runs, initialization.
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MObject callBackNode;
@@ -1421,6 +1687,21 @@ EXPORT MStatus initializePlugin(MObject obj)
 		SixtyFpsLock,
 		NULL, &status
 	);
+
+	MCallbackId tenFpsID = MTimerMessage::addTimerCallback
+	(
+		0.1,
+		TenFpsLock,
+		NULL, &status
+	);
+
+	if (status == MS::kSuccess) {
+
+		if (myCallbackArray.append(tenFpsID) == MS::kSuccess)
+		{
+
+		}
+	}
 
 	if (status == MS::kSuccess) {
 
@@ -1557,6 +1838,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 	return res;
 }
 
+//	called when we exit the plugin, to safely clear our callback array.
 EXPORT MStatus uninitializePlugin(MObject obj)
 {
 	MFnPlugin App(obj);

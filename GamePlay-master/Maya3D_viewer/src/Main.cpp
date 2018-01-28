@@ -166,13 +166,20 @@ void Main::nodeRemoved(char* &msg)
 }
 void Main::UpdateMeshData(char* &msg)
 {
+	Vector3 replaceTransVec;
+	Quaternion replaceRotQuat;
+	Vector3 replaceScaleVec;
+	bool replace = true;
 	MayaMesh* meshRecieved = new MayaMesh();
 	memcpy(meshRecieved, msg, sizeof(MayaMesh));
 	Node* node = _scene->findNode(meshRecieved->name);
+	_scene->findNode(meshRecieved->name)->getTranslation(&replaceTransVec);
+	_scene->findNode(meshRecieved->name)->getRotation(&replaceRotQuat);
+	_scene->findNode(meshRecieved->name)->getScale(&replaceScaleVec);
 	_scene->removeNode(node);
 	
 	delete[] meshRecieved;
-	CreateMesh(msg);
+	CreateMesh(msg,replace,replaceTransVec,replaceRotQuat,replaceScaleVec);
 	
 }
 void Main::ColorUpdate(char* &msg)
@@ -235,6 +242,7 @@ void Main::MaterialChange(char* &msg)
 
 }
 void Main::CreateMesh(char* &msg)
+void Main::CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec, Quaternion replaceRotQuat, Vector3 replaceScaleVec)
 {
     
 	vector<Vertex> vtxVector;
@@ -390,7 +398,12 @@ void Main::CreateMesh(char* &msg)
     sprintf(nodeName, meshRecieved->name);
     
 	Node *node = _scene->addNode(nodeName);
-
+	if (replace)
+	{
+		_scene->findNode(meshRecieved->name)->setTranslation(replaceTransVec);
+		_scene->findNode(meshRecieved->name)->setRotation(replaceRotQuat);
+		_scene->findNode(meshRecieved->name)->setScale(replaceScaleVec);
+	}
 	//Adding the meshes and models to the meshcontainer struct
 	
 	container.meshes.push_back(newMesh);
@@ -431,7 +444,7 @@ void Main::unPack()
 
 	case (int)MsgType::CREATE_MESH:	
 		//	CREATE_MESH
-		CreateMesh(Package);		
+		CreateMesh(Package,false);		
 		break;
 	case (int)MsgType::VERTEX_TRANSLATION:
 		UpdateMeshData(Package);
