@@ -220,7 +220,6 @@ void Main::TextureUpdate(char *& msg)
 	delete[] texName;
 }
 
-
 void Main::CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec, Quaternion replaceRotQuat, Vector3 replaceScaleVec)
 {
     
