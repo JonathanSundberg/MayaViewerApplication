@@ -97,6 +97,10 @@ private:
 
 	void MaterialChange(char* &msg);
 
+	void CreateTexturedMesh(int infoIndex, const char* texture, Vector3 replaceTransVec = { 0,0,0 }, Quaternion replaceRotQuat = { 0,0,0,0 }, Vector3 replaceScaleVec = { 0,0,0 });
+
+	void CreateColoredMesh(int infoIndex, Vector4 meshColor, Vector3 replaceTransVec = { 0,0,0 }, Quaternion replaceRotQuat = { 0,0,0,0 }, Vector3 replaceScaleVec = { 0,0,0 });
+
 	//MeshContainer meshContainer;
 	
 	unsigned int meshCount;

@@ -338,17 +338,7 @@ MIntArray GetLocalIndex(MIntArray &getVertices, MIntArray &getTriangle)
     return localIndex;
 }
 
-void meshChanged(MObject & node, void* clientData)
-{
-
-	MString msg = "A mesh has been changed! ";
-	MFnDagNode myDag = node;
-	msg += myDag.absoluteName();
-
-	MGlobal::displayInfo(msg);
-
-}
-
+//called when making a new mesh
 void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPlug, void* clientData)
 {
 	MStatus status;
@@ -591,26 +581,12 @@ void getNewMeshData(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &othe
 
 	}
 }
-
+//Callback for getting meshdata on creating new mesh
 void childAdded(MDagPath &child, MDagPath &parent, void* clientData)
 {
 	MStatus status;
 	if (child.node().apiType() == MFn::kMesh)
 	{
-		MCallbackId meshChangedID = MPolyMessage::addPolyTopologyChangedCallback
-		(
-			child.node(),
-			meshChanged,
-			NULL,
-			&status
-		);
-		if (status == MS::kSuccess)
-		{
-			if (myCallbackArray.append(meshChangedID) == MS::kSuccess)
-			{
-				//MGlobal::displayInfo("MeshChanged callback added successfully!");
-			}
-		}
 		meshCreatedId = MNodeMessage::addAttributeChangedCallback(
 			child.node(),
 			getNewMeshData,
@@ -947,7 +923,7 @@ string GetMeshFromMat(MFnLambertShader myLambert)
 
 	return name;
 }
-
+//Called when updating a mesh attribute
 void updateMesh(MPlug &plug)
 {
 	MStatus status;

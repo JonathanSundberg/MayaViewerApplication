@@ -10,17 +10,26 @@ struct MeshData {
 	vector<Vertex> vertices;
 	vector<Normal> normals;
 };
+
+struct MeshInfo
+{
+	char meshName[75];
+	float* meshVertexData;
+	int sizeOfVtxIndex;
+};
 struct MeshContainer
 {
 	vector<Model*> models;
 	vector<Mesh*> meshes;
 	vector<Material*> materials;
+	vector<Node*> nodes;
 	vector<string> name;
 	vector<string> matName;
+	vector<MeshInfo> RecreationData;
+	vector<bool> textured;
 };
 
-Model** myModels = new Model*[1000];
-int myModelIndex = 0;
+
 // Declare our game instance
 Main game;
 Comlib* Receiver;
@@ -185,15 +194,27 @@ void Main::UpdateMeshData(char* &msg)
 void Main::ColorUpdate(char* &msg)
 {
 	Color *myColor = new Color();
-
+	Vector3 replaceTransVec;
+	Quaternion replaceRotQuat;
+	Vector3 replaceScaleVec;
 	memcpy(myColor, msg, sizeof(Color));
 	string tempMat = myColor->matName;
+	for (size_t i = 0; i < container.name.size(); i++)
+	{
+		if (container.name[i] == myColor->meshName)
+		{
+			container.matName[i] = tempMat;
+		}
+	}
 	for (size_t i = 0; i < container.matName.size(); i++)
 	{
 		if (container.matName[i] == tempMat)
 		{
-			container.materials[i]->getParameter("u_diffuseColor")->setValue(Vector4(myColor->colors[0], myColor->colors[1], myColor->colors[2], 1.0f));
-		
+			_scene->findNode(container.name[i].c_str())->getTranslation(&replaceTransVec);
+			_scene->findNode(container.name[i].c_str())->getRotation(&replaceRotQuat);
+			_scene->findNode(container.name[i].c_str())->getScale(&replaceScaleVec);
+			Vector4 newColor = Vector4(myColor->colors[0], myColor->colors[1], myColor->colors[2], 1.0f);
+			CreateColoredMesh(i, newColor, replaceTransVec, replaceRotQuat, replaceScaleVec);
 		}
 	}
 
@@ -206,15 +227,28 @@ void Main::TextureUpdate(char* &msg)
 	memcpy(texName, msg, sizeof(TextureName));
 	string tempMat = texName->matName;
 	string tempFile = texName->file;
-	for (size_t i = 0; i < container.matName.size(); i++)
+
+	Vector3 replaceTransVec;
+	Quaternion replaceRotQuat;
+	Vector3 replaceScaleVec;
+	size_t texSize = tempFile.size();
+	if (texSize > 3)
 	{
-
-		if (container.matName[i] == tempMat)
+		for (size_t i = 0; i < container.matName.size(); i++)
 		{
-			const char* fileName = tempFile.c_str();
-			container.materials[i]->getParameter("u_diffuseTexture")->setValue(fileName, true);
-		}
 
+			if (container.matName[i] == tempMat)
+			{
+				const char* fileName = tempFile.c_str();
+
+				_scene->findNode(container.name[i].c_str())->getTranslation(&replaceTransVec);
+				_scene->findNode(container.name[i].c_str())->getRotation(&replaceRotQuat);
+				_scene->findNode(container.name[i].c_str())->getScale(&replaceScaleVec);
+
+				CreateTexturedMesh(i, fileName, replaceTransVec, replaceRotQuat, replaceScaleVec);
+			}
+
+		}
 	}
 
 	delete[] texName;
@@ -234,14 +268,156 @@ void Main::MaterialChange(char* &msg)
 		{
 			container.matName[i] = tempMat;
 			const char* texFile = tempTex.c_str();
-			container.materials[i]->getParameter("u_diffuseTexture")->setValue(texFile, true);
 		}
 	}
+}
+
+void Main::CreateTexturedMesh(int infoIndex, const char* texture, Vector3 replaceTransVec, Quaternion replaceRotQuat, Vector3 replaceScaleVec)
+{
 
 
+	int Size = container.RecreationData[infoIndex].sizeOfVtxIndex;
+	container.textured[infoIndex] = true;
+
+	int *indices = new int[Size];
+	for (size_t i = 0; i < Size; i++)
+	{
+		indices[i] = i;
+	}
+
+	VertexFormat::Element elements[] = {
+		VertexFormat::Element(VertexFormat::POSITION, 3),
+		VertexFormat::Element(VertexFormat::NORMAL, 3),
+		VertexFormat::Element(VertexFormat::TEXCOORD0, 2)
+	};
+
+	Mesh* newMesh = Mesh::createMesh(VertexFormat(elements, 3), Size, false);
+	if (newMesh == NULL)
+	{
+		GP_ERROR("Failed to create mesh");
+		return;
+	}
+
+	newMesh->setVertexData(container.RecreationData[infoIndex].meshVertexData, 0, Size);
+	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX32, Size);
+	meshPart->setIndexData(indices, 0, Size);
+
+
+	Model* models[10];
+	Material *mats[10];
+	Texture::Sampler* sampler;
+
+	Node* lightNode = _scene->addNode("light");
+	Light* light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
+	lightNode->setLight(light);
+	SAFE_RELEASE(light);
+	lightNode->translate(Vector3(0, 1, 5));
+
+	models[0] = Model::create(newMesh);
+	mats[0] = models[0]->setMaterial("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+
+	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.25f, 0.25f, 0.25f));
+	mats[0]->getParameter("u_pointLightColor[0]")->setValue(_scene->findNode("Light")->getLight()->getColor());
+	mats[0]->getParameter("u_pointLightPosition[0]")->bindValue(_scene->findNode("Light"), &Node::getTranslationWorld);
+	mats[0]->getParameter("u_pointLightRangeInverse[0]")->bindValue(_scene->findNode("Light")->getLight(), &Light::getRangeInverse);
+	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	sampler = mats[0]->getParameter("u_diffuseTexture")->setValue(texture, true);
+
+	sampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+
+	mats[0]->getStateBlock()->setCullFace(true);
+	mats[0]->getStateBlock()->setDepthTest(true);
+	mats[0]->getStateBlock()->setDepthWrite(true);
+
+
+	char nodeName[75] = {};
+	sprintf(nodeName, container.RecreationData[infoIndex].meshName);
+	_scene->removeNode(_scene->findNode(nodeName));
+	Node *node = _scene->addNode(nodeName);
+
+	_scene->findNode(container.RecreationData[infoIndex].meshName)->setTranslation(replaceTransVec);
+	_scene->findNode(container.RecreationData[infoIndex].meshName)->setRotation(replaceRotQuat);
+	_scene->findNode(container.RecreationData[infoIndex].meshName)->setScale(replaceScaleVec);
+	
+	node->setDrawable(models[0]);
+	SAFE_RELEASE(models[0]);
+	meshCount++;
+}
+
+void Main::CreateColoredMesh(int infoIndex, Vector4 meshColor, Vector3 replaceTransVec, Quaternion replaceRotQuat, Vector3 replaceScaleVec)
+{
+
+	int Size = container.RecreationData[infoIndex].sizeOfVtxIndex;
+	container.textured[infoIndex] = false;
+
+	int *indices = new int[Size];
+	for (size_t i = 0; i < Size; i++)
+	{
+		indices[i] = i;
+	}
+
+	VertexFormat::Element elements[] = {
+		VertexFormat::Element(VertexFormat::POSITION, 3),
+		VertexFormat::Element(VertexFormat::NORMAL, 3),
+		VertexFormat::Element(VertexFormat::TEXCOORD0, 2)
+	};
+
+	Mesh* newMesh = Mesh::createMesh(VertexFormat(elements, 3), Size, false);
+	if (newMesh == NULL)
+	{
+		GP_ERROR("Failed to create mesh");
+		return;
+	}
+
+	newMesh->setVertexData(container.RecreationData[infoIndex].meshVertexData, 0, Size);
+	MeshPart* meshPart = newMesh->addPart(Mesh::TRIANGLES, Mesh::INDEX32, Size);
+	meshPart->setIndexData(indices, 0, Size);
+
+
+	Model* models[10];
+	Material *mats[10];
+	Texture::Sampler* sampler;
+
+	Node* lightNode = _scene->addNode("light");
+	Light* light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
+	lightNode->setLight(light);
+	SAFE_RELEASE(light);
+	lightNode->translate(Vector3(0, 1, 5));
+
+
+	models[0] = Model::create(newMesh);
+	mats[0] = models[0]->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	
+	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.25f, 0.25f, 0.25f));
+	mats[0]->getParameter("u_pointLightColor[0]")->setValue(_scene->findNode("Light")->getLight()->getColor());
+	mats[0]->getParameter("u_pointLightPosition[0]")->bindValue(_scene->findNode("Light"), &Node::getTranslationWorld);
+	mats[0]->getParameter("u_pointLightRangeInverse[0]")->bindValue(_scene->findNode("Light")->getLight(), &Light::getRangeInverse);
+	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	mats[0]->getParameter("u_diffuseColor")->setValue(meshColor);
+
+
+	mats[0]->getStateBlock()->setCullFace(true);
+	mats[0]->getStateBlock()->setDepthTest(true);
+	mats[0]->getStateBlock()->setDepthWrite(true);
+
+
+	char nodeName[75] = {};
+	sprintf(nodeName, container.RecreationData[infoIndex].meshName);
+	_scene->removeNode(_scene->findNode(nodeName));
+	Node *node = _scene->addNode(nodeName);
+
+	_scene->findNode(container.RecreationData[infoIndex].meshName)->setTranslation(replaceTransVec);
+	_scene->findNode(container.RecreationData[infoIndex].meshName)->setRotation(replaceRotQuat);
+	_scene->findNode(container.RecreationData[infoIndex].meshName)->setScale(replaceScaleVec);
+
+	node->setDrawable(models[0]);
+	SAFE_RELEASE(models[0]);
+	meshCount++;
 
 }
-void Main::CreateMesh(char* &msg)
+
 void Main::CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec, Quaternion replaceRotQuat, Vector3 replaceScaleVec)
 {
     
@@ -373,10 +549,10 @@ void Main::CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec, Quatern
 	SAFE_RELEASE(light);
 	lightNode->translate(Vector3(0, 1, 5));
 
-	//char* texturePath = "res/uvsnap.png";
+
     models[0] = Model::create(newMesh);
 	mats[0] = models[0]->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
-	//mats[0] = models[0]->setMaterial("res/demo.material#lambert2");
+
 	mats[0]->getParameter("u_ambientColor")->setValue(Vector3(0.25f, 0.25f, 0.25f));
 	mats[0]->getParameter("u_pointLightColor[0]")->setValue(_scene->findNode("Light")->getLight()->getColor());
 	mats[0]->getParameter("u_pointLightPosition[0]")->bindValue(_scene->findNode("Light"), &Node::getTranslationWorld);
@@ -384,20 +560,17 @@ void Main::CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec, Quatern
 	mats[0]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 	mats[0]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
 	mats[0]->getParameter("u_diffuseColor")->setValue(Vector4(0.4f, 0.4f, 0.4f, 1.0f));
-	//sampler = mats[0]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
-	
-	//sampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+
 
 	mats[0]->getStateBlock()->setCullFace(true);
 	mats[0]->getStateBlock()->setDepthTest(true);
 	mats[0]->getStateBlock()->setDepthWrite(true);
-	myModels[myModelIndex] = models[0];
-	myModelIndex++;
 	
     char nodeName[75] = {};
     sprintf(nodeName, meshRecieved->name);
     
 	Node *node = _scene->addNode(nodeName);
+
 	if (replace)
 	{
 		_scene->findNode(meshRecieved->name)->setTranslation(replaceTransVec);
@@ -405,7 +578,19 @@ void Main::CreateMesh(char* &msg, bool replace, Vector3 replaceTransVec, Quatern
 		_scene->findNode(meshRecieved->name)->setScale(replaceScaleVec);
 	}
 	//Adding the meshes and models to the meshcontainer struct
-	
+
+	MeshInfo myInfo;
+
+	sprintf(myInfo.meshName, meshRecieved->name);
+	myInfo.meshVertexData = new float[meshRecieved->sizeOfVtxIndex * 8];
+	memcpy(myInfo.meshVertexData, meshVertexData, sizeof(float) * (meshRecieved->sizeOfVtxIndex * 8));
+	myInfo.sizeOfVtxIndex = meshRecieved->sizeOfVtxIndex;
+
+
+
+	container.textured.push_back(false);
+	container.RecreationData.push_back(myInfo);
+	container.nodes.push_back(node);
 	container.meshes.push_back(newMesh);
 	container.models.push_back(Model::create(newMesh));
 	container.name.push_back(nodeName);
@@ -482,15 +667,7 @@ void Main::finalize()
 
 void Main::update(float elapsedTime)
 {
-
-	
-
 	unPack();
-    // Rotate model
-    //_scene->findNode("box")->rotateY(MATH_DEG_TO_RAD((float)elapsedTime / 1000.0f * 180.0f));
-
-	
-
 }
 
 void Main::render(float elapsedTime)
