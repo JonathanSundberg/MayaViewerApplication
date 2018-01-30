@@ -45,6 +45,7 @@ struct storeMeshData
 vector<storeMeshData> VertexStorage;
 
 
+
 struct matrix
 {
 	matrix(): tx(1), ty(1),tz(1),rx(1),ry(1),rz(1),sx(1),sy(1),sz(1) {}
@@ -1417,41 +1418,6 @@ void AttrChanged(MNodeMessage::AttributeMessage msg, MPlug &plug, MPlug &otherPl
 
 			}
 
-
-
-			/*print += myColor.r;
-			print += " ";
-			print += myColor.g;
-			print += " ";
-			print += myColor.b;
-			print += " ";
-			print += myColor.a;*/
-
-			/*print += transp.r;
-			print += " ";
-			print += transp.g;
-			print += " ";
-			print += transp.b;
-			print += " ";
-			print += transp.a;*/
-
-			/*print += incan.r;
-			print += " ";
-			print += incan.g;
-			print += " ";
-			print += incan.b;
-			print += " ";
-			print += incan.a;*/
-
-			/*print += diffuse.r;
-			print += " ";
-			print += diffuse.g;
-			print += " ";
-			print += diffuse.b;
-			print += " ";
-			print += diffuse.a;*/
-
-			//MGlobal::displayInfo(print);
 		}
 		MStatus status;
 
